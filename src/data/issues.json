@@ -1,0 +1,23 @@
+[
+  {
+    "id": "iss_1779099459109_u6q8o6c",
+    "catalogId": "1",
+    "studentId": "E-15711/24",
+    "studentName": "Raj Ritik Varma",
+    "teacherId": "T001",
+    "teacherName": "Library Teacher",
+    "issuedAt": "2026-05-18T10:17:39.109Z",
+    "status": "returned",
+    "returnedAt": "2026-05-18T10:17:55.336Z"
+  },
+  {
+    "id": "iss_1779099518825_88cvab9",
+    "catalogId": "1",
+    "studentId": "E-15711/24",
+    "studentName": "Raj Ritik Varma",
+    "teacherId": "T001",
+    "teacherName": "Library Teacher",
+    "issuedAt": "2026-05-18T10:18:38.825Z",
+    "status": "issued"
+  }
+]

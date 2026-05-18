@@ -1,0 +1,9 @@
+{
+  "name": "library-app-monorepo",
+  "private": true,
+  "description": "Repo root — Render can use Root Directory: src OR empty with this file",
+  "scripts": {
+    "start": "npm start --prefix src",
+    "sync-api-to-src": "node scripts/sync-api-to-src.js"
+  }
+}
