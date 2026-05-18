@@ -108,7 +108,7 @@ async function seedFromCatalog() {
   if (count > 0) {
     return;
   }
-  const catalogPath = path.join(__dirname, 'data', 'catalog.json');
+  const catalogPath = path.join(__dirname, '..', 'src', 'data', 'catalog.json');
   if (!fs.existsSync(catalogPath)) {
     console.log('No catalog.json to seed');
     return;
@@ -436,10 +436,10 @@ app.post('/api/sync-catalog', authTeacher, async (_req, res) => {
     if (USE_FILE_MODE) {
       return res.json({
         ok: true,
-        message: 'FILE mode: list from data/catalog.json on disk.',
+        message: 'FILE mode: Excel se list har request par ../src/data/catalog.json se aati hai. Pehle npm run import-books chalayein.',
       });
     }
-    const catalogPath = path.join(__dirname, 'data', 'catalog.json');
+    const catalogPath = path.join(__dirname, '..', 'src', 'data', 'catalog.json');
     if (!fs.existsSync(catalogPath)) {
       return res.status(404).json({ error: 'catalog.json not found. Run npm run import-books' });
     }
@@ -480,7 +480,7 @@ async function start() {
   if (forceFile) {
     USE_FILE_MODE = true;
     await fileStore.initFileTeacher(process.env);
-    console.log('FILE mode: data/catalog.json | issues → data/issues.json');
+    console.log('FILE mode: Excel → ../src/data/catalog.json | issues → server/data/issues.json');
   } else {
     try {
       await mongoose.connect(uri, { serverSelectionTimeoutMS: 12000 });
