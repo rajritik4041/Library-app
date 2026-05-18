@@ -1,0 +1,245 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+
+import { AvailabilityBadge } from '@/components/library/availability-badge';
+import { DetailRow } from '@/components/library/detail-row';
+import { ScreenShell } from '@/components/library/screen-shell';
+import { ThemedText } from '@/components/themed-text';
+import { useAuth } from '@/context/auth-context';
+import { useBooksApi } from '@/context/books-api-context';
+import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { bookToApi } from '@/lib/catalog-to-api';
+import { getBookById, getDepartmentLabel } from '@/lib/books';
+import { api } from '@/services/api';
+import type { ApiBook, ApiIssue } from '@/types/api';
+import { useTheme } from '@/hooks/use-theme';
+
+export default function BookDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { isTeacher, token } = useAuth();
+  const { refresh } = useBooksApi();
+  const theme = useTheme();
+
+  const [book, setBook] = useState<ApiBook | null>(null);
+  const [activeIssues, setActiveIssues] = useState<ApiIssue[]>([]);
+  const [studentId, setStudentId] = useState('');
+  const [studentName, setStudentName] = useState('');
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    const fallback = () => {
+      const b = getBookById(id);
+      if (b) {
+        setBook(bookToApi(b));
+        setActiveIssues([]);
+      } else {
+        setBook(null);
+      }
+    };
+    try {
+      const data = await api.getBook(id);
+      setBook(data.book);
+      setActiveIssues(data.activeIssues);
+    } catch {
+      fallback();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const issueToStudent = async () => {
+    if (!token || !id || !studentId.trim()) {
+      Alert.alert('Error', 'Student ID required');
+      return;
+    }
+    try {
+      await api.issueBook(token, {
+        bookId: id,
+        studentId: studentId.trim(),
+        studentName: studentName.trim(),
+      });
+      setStudentId('');
+      setStudentName('');
+      await load();
+      await refresh();
+      Alert.alert('Issued', `Book student ${studentId} ko di gayi`);
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'Issue failed');
+    }
+  };
+
+  if (!book) {
+    return (
+      <ScreenShell>
+        <ThemedText style={styles.notFoundTitle}>Book not found</ThemedText>
+        <Pressable onPress={() => router.back()}>
+          <ThemedText style={styles.backLinkText}>← Go back</ThemedText>
+        </Pressable>
+      </ScreenShell>
+    );
+  }
+
+  return (
+    <ScreenShell>
+      <Pressable onPress={() => router.back()}>
+        <ThemedText style={styles.backLinkText}>← Back to catalog</ThemedText>
+      </Pressable>
+
+      <LinearGradient
+        colors={[LibraryColors.navy, LibraryColors.navyMid]}
+        style={styles.hero}>
+        <ThemedText style={styles.heroId}>Book #{book.serialNo} · ID {book.id}</ThemedText>
+        <ThemedText style={styles.title}>{book.title}</ThemedText>
+        {book.authors ? <ThemedText style={styles.authors}>by {book.authors}</ThemedText> : null}
+        <AvailabilityBadge
+          status={book.status}
+          availableCount={book.availableCount}
+          copies={book.copies}
+        />
+      </LinearGradient>
+
+      <View style={styles.detailsCard}>
+        <ThemedText style={styles.sectionTitle}>Book Information</ThemedText>
+        <DetailRow label="Publisher" value={book.publisher || '—'} />
+        <DetailRow label="Department" value={`${book.department} — ${getDepartmentLabel(book.department)}`} />
+        <DetailRow label="Subject" value={`${book.subject} — ${getDepartmentLabel(book.subject)}`} />
+        <DetailRow label="Rack Number" value={book.rackNo} />
+        <DetailRow label="Total Copies" value={String(book.copies)} />
+        <DetailRow label="In Library Now" value={String(book.availableCount)} />
+        <DetailRow label="Currently Issued" value={String(book.issuedCount)} />
+      </View>
+
+      {isTeacher && activeIssues.length > 0 ? (
+        <View style={styles.issuesCard}>
+          <ThemedText style={styles.sectionTitle}>Students with this book</ThemedText>
+          {activeIssues.map((issue) => (
+            <View key={issue.id} style={styles.issueRow}>
+              <ThemedText style={styles.issueStudent}>Student ID: {issue.studentId}</ThemedText>
+              {issue.studentName ? (
+                <ThemedText style={styles.issueMeta}>{issue.studentName}</ThemedText>
+              ) : null}
+              <ThemedText style={styles.issueMeta}>
+                Since {new Date(issue.issuedAt).toLocaleDateString('en-IN')}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
+      ) : !isTeacher && book.status === 'issued_out' ? (
+        <View style={styles.publicNote}>
+          <ThemedText style={styles.publicNoteText}>
+            Ye book abhi library mein nahi hai — kisi student ne issue karayi hai. (Student ID sirf
+            teacher dekh sakte hain.)
+          </ThemedText>
+        </View>
+      ) : null}
+
+      {isTeacher && book.availableCount > 0 ? (
+        <View style={styles.issueForm}>
+          <ThemedText style={styles.sectionTitle}>Issue to Student</ThemedText>
+          <TextInput
+            placeholder="Student ID *"
+            value={studentId}
+            onChangeText={setStudentId}
+            autoCapitalize="characters"
+            placeholderTextColor={theme.textSecondary}
+            style={[styles.input, { color: theme.text }]}
+          />
+          <TextInput
+            placeholder="Student name (optional)"
+            value={studentName}
+            onChangeText={setStudentName}
+            placeholderTextColor={theme.textSecondary}
+            style={[styles.input, { color: theme.text }]}
+          />
+          <Pressable style={styles.issueBtn} onPress={issueToStudent}>
+            <ThemedText style={styles.issueBtnText}>Issue Book</ThemedText>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {!isTeacher ? (
+        <Pressable style={styles.loginBtn} onPress={() => router.push('/login')}>
+          <ThemedText style={styles.loginBtnText}>Teacher Login</ThemedText>
+        </Pressable>
+      ) : null}
+    </ScreenShell>
+  );
+}
+
+const styles = StyleSheet.create({
+  backLinkText: { color: LibraryColors.accent, fontWeight: '600', fontSize: 15 },
+  hero: {
+    borderRadius: Radius.xl,
+    padding: Spacing.four,
+    gap: Spacing.two,
+  },
+  heroId: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
+  title: { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 32 },
+  authors: { fontSize: 16, color: 'rgba(255,255,255,0.85)' },
+  detailsCard: {
+    backgroundColor: LibraryColors.card,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    borderWidth: 1,
+    borderColor: LibraryColors.border,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: LibraryColors.navy,
+    marginBottom: Spacing.two,
+  },
+  issuesCard: {
+    backgroundColor: '#fff7ed',
+    padding: Spacing.four,
+    borderRadius: Radius.lg,
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+  },
+  issueRow: { gap: 4, paddingVertical: Spacing.two, borderBottomWidth: 1, borderBottomColor: '#fed7aa' },
+  issueStudent: { fontWeight: '800', color: LibraryColors.navy, fontSize: 15 },
+  issueMeta: { fontSize: 13, color: LibraryColors.muted },
+  publicNote: {
+    backgroundColor: LibraryColors.accentSoft,
+    padding: Spacing.four,
+    borderRadius: Radius.lg,
+  },
+  publicNoteText: { color: LibraryColors.navy, lineHeight: 22 },
+  issueForm: {
+    backgroundColor: LibraryColors.card,
+    padding: Spacing.four,
+    borderRadius: Radius.lg,
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderColor: LibraryColors.border,
+    marginBottom: Spacing.five,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: LibraryColors.border,
+    borderRadius: Radius.md,
+    padding: Spacing.three,
+    fontSize: 15,
+    outlineStyle: 'none',
+  } as object,
+  issueBtn: {
+    backgroundColor: LibraryColors.navy,
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+  },
+  issueBtnText: { color: '#fff', fontWeight: '800' },
+  loginBtn: {
+    padding: Spacing.three,
+    alignItems: 'center',
+    marginBottom: Spacing.five,
+  },
+  loginBtnText: { color: LibraryColors.accent, fontWeight: '700' },
+  notFoundTitle: { fontSize: 22, fontWeight: '700', color: LibraryColors.navy },
+});
