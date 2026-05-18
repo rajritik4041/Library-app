@@ -1,0 +1,28 @@
+# Render Blueprint — API server (Expo app alag EAS se build hota hai)
+# Dashboard: Settings → Root Directory MUST be empty OR match rootDir below
+services:
+  - type: web
+    name: library-api
+    runtime: node
+    plan: free
+    # Render dashboard mein Root Directory = src ho to bhi chalega
+    rootDir: src
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: USE_FILE_STORE
+        value: "1"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DEFAULT_TEACHER_ID
+        value: T001
+      - key: DEFAULT_TEACHER_PASSWORD
+        value: teacher123
+      - key: DEFAULT_TEACHER_NAME
+        value: Library Teacher
+      # Optional: MongoDB Atlas (agar set karein to USE_FILE_STORE=0 karein)
+      # - key: MONGODB_URI
+      #   sync: false

@@ -1,0 +1,13 @@
+{
+  "name": "library-api-render-entry",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Render entry — real API lives in Library/server",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "postinstall": "npm install --prefix ../Library/server",
+    "start": "npm start --prefix ../Library/server"
+  }
+}
