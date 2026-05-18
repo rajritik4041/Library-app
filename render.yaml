@@ -1,9 +1,14 @@
+# Render Web Service — BACKEND only
+# Dashboard: Root Directory = (EMPTY / blank)
+# Build Command: npm install
+# Start Command: npm start
+
 services:
   - type: web
     name: library-api
     runtime: node
     plan: free
-    rootDir: src
+    # Root Directory blank = repo root; postinstall installs backend/
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health

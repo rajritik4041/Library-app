@@ -13,6 +13,7 @@
     "import-books": "node ./scripts/import-books.js",
     "watch-books": "node ./scripts/watch-excel.js",
     "server": "npm run start --prefix server",
+    "sync-backend": "node ../scripts/sync-backend.js",
     "dev:all": "node ./scripts/import-books.js && npm run server",
     "lint": "expo lint"
   },

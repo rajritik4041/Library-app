@@ -1,9 +1,10 @@
 {
-  "name": "library-app-monorepo",
+  "name": "library-app",
   "private": true,
-  "description": "Repo root — Render can use Root Directory: src OR empty with this file",
+  "description": "Monorepo root — Render: Root Directory KHALI rakhein, Build & Start default",
   "scripts": {
-    "start": "npm start --prefix src",
-    "sync-api-to-src": "node scripts/sync-api-to-src.js"
+    "postinstall": "npm install --prefix backend",
+    "start": "npm start --prefix backend",
+    "sync-backend": "node scripts/sync-backend.js"
   }
 }
