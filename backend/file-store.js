@@ -11,6 +11,7 @@ const CATALOG_PATH = path.join(__dirname, 'data', 'catalog.json');
 const DATA_DIR = path.join(__dirname, 'data');
 const ISSUES_PATH = path.join(DATA_DIR, 'issues.json');
 const CUSTOM_BOOKS_PATH = path.join(DATA_DIR, 'custom-books.json');
+const STUDENTS_PATH = path.join(DATA_DIR, 'students.json');
 
 function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -20,6 +21,204 @@ function ensureDataDir() {
   if (!fs.existsSync(CUSTOM_BOOKS_PATH)) {
     fs.writeFileSync(CUSTOM_BOOKS_PATH, JSON.stringify([], null, 2));
   }
+  if (!fs.existsSync(STUDENTS_PATH)) {
+    fs.writeFileSync(STUDENTS_PATH, JSON.stringify([], null, 2));
+  }
+}
+
+function readStudents() {
+  ensureDataDir();
+  return JSON.parse(fs.readFileSync(STUDENTS_PATH, 'utf8'));
+}
+
+function writeStudents(students) {
+  ensureDataDir();
+  fs.writeFileSync(STUDENTS_PATH, JSON.stringify(students, null, 2));
+}
+
+function studentPublicRow(s) {
+  const loginId = s.studentUserId || s.userId || '';
+  return {
+    studentId: s.studentId,
+    userId: loginId,
+    studentUserId: loginId,
+    name: s.name,
+    mobile: s.mobile,
+    course: s.course,
+    year: s.year,
+    department: s.department,
+    createdAt: s.createdAt,
+  };
+}
+
+export function fileListStudents(search = '') {
+  const q = String(search).trim().toUpperCase();
+  let list = readStudents();
+  if (q) {
+    list = list.filter((s) => {
+      const loginId = (s.studentUserId || s.userId || '').toUpperCase();
+      return (
+        s.studentId.toUpperCase().includes(q) ||
+        loginId.includes(q) ||
+        s.name.toUpperCase().includes(q) ||
+        s.mobile.includes(q) ||
+        s.course.toUpperCase().includes(q) ||
+        s.department.toUpperCase().includes(q)
+      );
+    });
+  }
+  return list.map(studentPublicRow);
+}
+
+export function fileFindStudent(studentId) {
+  return readStudents().find((s) => s.studentId === String(studentId).toUpperCase().trim()) || null;
+}
+
+export function fileFindStudentByLogin(loginId) {
+  const id = String(loginId).toUpperCase().trim();
+  return (
+    readStudents().find((s) => (s.studentUserId || s.userId || '') === id) || null
+  );
+}
+
+export function fileFindStudentByKey(key) {
+  const id = String(key).toUpperCase().trim();
+  return (
+    readStudents().find(
+      (s) =>
+        (s.studentUserId || s.userId || '') === id || s.studentId === id,
+    ) || null
+  );
+}
+
+export async function fileCreateStudent({
+  studentId,
+  studentUserId,
+  userId,
+  password,
+  name,
+  mobile,
+  course,
+  year,
+  department,
+}) {
+  const students = readStudents();
+  const idNo = String(studentId).toUpperCase().trim();
+  const loginId = String(studentUserId || userId).toUpperCase().trim();
+  const mobileNorm = String(mobile).trim();
+  if (students.some((s) => s.studentId === idNo)) {
+    throw new Error('Student ID No already exists');
+  }
+  if (students.some((s) => (s.studentUserId || s.userId) === loginId)) {
+    throw new Error('Student User ID already exists');
+  }
+  if (students.some((s) => s.mobile === mobileNorm)) {
+    throw new Error('Mobile number already registered');
+  }
+  const passwordHash = await bcrypt.hash(password, 10);
+  const row = {
+    studentId: idNo,
+    studentUserId: loginId,
+    passwordHash,
+    name,
+    mobile: mobileNorm,
+    course,
+    year,
+    department,
+    createdAt: new Date().toISOString(),
+  };
+  students.push(row);
+  writeStudents(students);
+  return studentPublicRow(row);
+}
+
+export async function fileUpdateStudent(idNo, fields) {
+  const students = readStudents();
+  const id = String(idNo).toUpperCase().trim();
+  const idx = students.findIndex((s) => s.studentId === id);
+  if (idx === -1) {
+    throw new Error('Student not found');
+  }
+  const row = students[idx];
+  const loginInput = fields.studentUserId || fields.userId;
+  if (loginInput?.trim()) {
+    const loginId = String(loginInput).toUpperCase().trim();
+    if (students.some((s, i) => i !== idx && (s.studentUserId || s.userId) === loginId)) {
+      throw new Error('Student User ID already in use');
+    }
+    row.studentUserId = loginId;
+  }
+  if (fields.mobile?.trim()) {
+    const mobileNorm = fields.mobile.trim();
+    if (students.some((s, i) => i !== idx && s.mobile === mobileNorm)) {
+      throw new Error('Mobile number already in use');
+    }
+    row.mobile = mobileNorm;
+  }
+  if (fields.name?.trim()) row.name = fields.name.trim();
+  if (fields.mobile?.trim()) row.mobile = fields.mobile.trim();
+  if (fields.course?.trim()) row.course = fields.course.trim();
+  if (fields.year?.trim()) row.year = fields.year.trim();
+  if (fields.department?.trim()) row.department = fields.department.trim();
+  if (fields.password) {
+    row.passwordHash = await bcrypt.hash(fields.password, 10);
+  }
+  students[idx] = row;
+  writeStudents(students);
+  return studentPublicRow(row);
+}
+
+export function fileDeleteStudent(idNo) {
+  const students = readStudents();
+  const id = String(idNo).toUpperCase().trim();
+  const issues = readIssues();
+  const active = issues.filter((i) => i.studentId === id && i.status === 'issued');
+  if (active.length > 0) {
+    throw new Error('Cannot delete: student has books issued. Return all books first.');
+  }
+  const next = students.filter((s) => s.studentId !== id);
+  if (next.length === students.length) {
+    throw new Error('Student not found');
+  }
+  writeStudents(next);
+}
+
+export async function verifyFileStudent(loginId, password) {
+  const s = fileFindStudentByLogin(loginId);
+  if (!s) {
+    return null;
+  }
+  const ok = await bcrypt.compare(password, s.passwordHash);
+  if (!ok) {
+    return null;
+  }
+  return studentPublicRow(s);
+}
+
+export function fileGetStudentIssues(studentId) {
+  const issues = readIssues();
+  const books = readAllBooksRaw();
+  const byId = new Map(books.map((b) => [String(b.id), b]));
+  const sid = String(studentId).toUpperCase().trim();
+  return issues
+    .filter((i) => i.studentId === sid && i.status === 'issued')
+    .map((i) => {
+      const b = byId.get(i.catalogId);
+      return {
+        id: i.id,
+        studentId: i.studentId,
+        studentName: i.studentName,
+        issuedAt: i.issuedAt,
+        book: b
+          ? {
+              id: String(b.id),
+              title: b.title,
+              rackNo: b.rackNo,
+              department: b.department,
+            }
+          : null,
+      };
+    });
 }
 
 export function readAllBooksRaw() {
@@ -140,7 +339,44 @@ export function fileGetActiveIssues() {
     });
 }
 
+export function fileGetIssueHistory(limit = 300) {
+  const issues = readIssues();
+  const books = readAllBooksRaw();
+  const byId = new Map(books.map((b) => [String(b.id), b]));
+  return issues
+    .sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime())
+    .slice(0, limit)
+    .map((i) => {
+      const b = byId.get(i.catalogId);
+      return {
+        id: i.id,
+        studentId: i.studentId,
+        studentName: i.studentName || '',
+        teacherId: i.teacherId,
+        teacherName: i.teacherName || '',
+        status: i.status,
+        issuedAt: i.issuedAt,
+        returnedAt: i.returnedAt || null,
+        book: b
+          ? {
+              id: String(b.id),
+              title: b.title,
+              rackNo: b.rackNo,
+              department: b.department,
+            }
+          : null,
+      };
+    });
+}
+
 export function filePostIssue({ bookId, studentId, studentName, teacherId, teacherName }) {
+  const sid = String(studentId).toUpperCase().trim();
+  const st = fileFindStudent(sid);
+  if (!st) {
+    throw new Error(
+      'Student not registered. Pehle teacher panel se student register karein (ID No se).',
+    );
+  }
   const issues = readIssues();
   const books = readAllBooksRaw();
   const b = books.find((x) => String(x.id) === String(bookId));
@@ -156,8 +392,8 @@ export function filePostIssue({ bookId, studentId, studentName, teacherId, teach
   issues.push({
     id,
     catalogId: String(bookId),
-    studentId: String(studentId).toUpperCase().trim(),
-    studentName: (studentName || '').trim(),
+    studentId: sid,
+    studentName: (studentName || st.name || '').trim(),
     teacherId,
     teacherName,
     issuedAt: new Date().toISOString(),

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { FormColors } from '@/constants/form-styles';
 import { LibraryColors, Radius, Spacing } from '@/constants/theme';
 
 type PageHeaderProps = {
@@ -21,11 +22,7 @@ export function PageHeader({ title, subtitle, badge }: PageHeaderProps) {
       <ThemedText type="subtitle" style={styles.title}>
         {title}
       </ThemedText>
-      {subtitle ? (
-        <ThemedText themeColor="textSecondary" style={styles.subtitle}>
-          {subtitle}
-        </ThemedText>
-      ) : null}
+      {subtitle ? <ThemedText style={styles.subtitle}>{subtitle}</ThemedText> : null}
     </View>
   );
 }
@@ -34,6 +31,8 @@ const styles = StyleSheet.create({
   wrapper: {
     gap: Spacing.two,
     paddingBottom: Spacing.two,
+    width: '100%',
+    alignItems: 'center',
   },
   badge: {
     alignSelf: 'flex-start',
@@ -53,10 +52,13 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 32,
     fontWeight: '800',
-    color: LibraryColors.navy,
+    color: FormColors.text,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
     lineHeight: 22,
+    color: FormColors.textMuted,
+    textAlign: 'center',
   },
 });

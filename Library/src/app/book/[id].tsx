@@ -25,8 +25,9 @@ export default function BookDetailScreen() {
 
   const [book, setBook] = useState<ApiBook | null>(null);
   const [activeIssues, setActiveIssues] = useState<ApiIssue[]>([]);
-  const [studentId, setStudentId] = useState('');
+  const [studentIdNo, setStudentIdNo] = useState('');
   const [studentName, setStudentName] = useState('');
+  const [studentLookupError, setStudentLookupError] = useState('');
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -52,24 +53,48 @@ export default function BookDetailScreen() {
     load();
   }, [load]);
 
-  const issueToStudent = async () => {
-    if (!token || !id || !studentId.trim()) {
-      Alert.alert('Error', 'Student ID required');
+  const lookupStudent = async () => {
+    const idNo = studentIdNo.trim();
+    if (!token || !idNo) {
+      setStudentName('');
+      setStudentLookupError('');
       return;
     }
     try {
+      const { student } = await api.lookupStudentByIdNo(token, idNo);
+      setStudentName(student.name);
+      setStudentIdNo(student.studentId);
+      setStudentLookupError('');
+    } catch {
+      setStudentName('');
+      setStudentLookupError('Student registered nahi — pehle teacher se register karwayein');
+    }
+  };
+
+  const issueToStudent = async () => {
+    if (!token || !id || !studentIdNo.trim()) {
+      Alert.alert('Error', 'Student ID No (enrollment) required');
+      return;
+    }
+    if (!studentName.trim()) {
+      Alert.alert('Error', 'Student registered nahi. Sahi ID No likhein — User ID se issue nahi hogi.');
+      return;
+    }
+    try {
+      const { student } = await api.lookupStudentByIdNo(token, studentIdNo);
       await api.issueBook(token, {
         bookId: id,
-        studentId: studentId.trim(),
-        studentName: studentName.trim(),
+        studentId: student.studentId,
+        studentName: student.name,
       });
-      setStudentId('');
+      setStudentIdNo('');
       setStudentName('');
+      setStudentLookupError('');
       await load();
       await refresh();
-      Alert.alert('Issued', `Book student ${studentId} ko di gayi`);
+      Alert.alert('Issued', `Book ${student.name} (${student.studentId}) ko di gayi`);
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Issue failed');
+      Alert.alert('Issue failed', e instanceof Error ? e.message : 'Could not issue book');
     }
   };
 
@@ -141,21 +166,27 @@ export default function BookDetailScreen() {
       {isTeacher && book.availableCount > 0 ? (
         <View style={styles.issueForm}>
           <ThemedText style={styles.sectionTitle}>Issue to Student</ThemedText>
+          <ThemedText style={styles.issueHint}>
+            Sirf registered students — ID No (enrollment) likhein, User ID nahi.
+          </ThemedText>
           <TextInput
-            placeholder="Student ID *"
-            value={studentId}
-            onChangeText={setStudentId}
+            placeholder="Student ID No *"
+            value={studentIdNo}
+            onChangeText={(v) => {
+              setStudentIdNo(v);
+              setStudentName('');
+              setStudentLookupError('');
+            }}
+            onBlur={lookupStudent}
             autoCapitalize="characters"
             placeholderTextColor={theme.textSecondary}
             style={[styles.input, { color: theme.text }]}
           />
-          <TextInput
-            placeholder="Student name (optional)"
-            value={studentName}
-            onChangeText={setStudentName}
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { color: theme.text }]}
-          />
+          {studentName ? (
+            <ThemedText style={styles.issueOk}>✓ {studentName}</ThemedText>
+          ) : studentLookupError ? (
+            <ThemedText style={styles.issueErr}>{studentLookupError}</ThemedText>
+          ) : null}
           <Pressable style={styles.issueBtn} onPress={issueToStudent}>
             <ThemedText style={styles.issueBtnText}>Issue Book</ThemedText>
           </Pressable>
@@ -163,8 +194,8 @@ export default function BookDetailScreen() {
       ) : null}
 
       {!isTeacher ? (
-        <Pressable style={styles.loginBtn} onPress={() => router.push('/login')}>
-          <ThemedText style={styles.loginBtnText}>Teacher Login</ThemedText>
+        <Pressable style={styles.loginBtn} onPress={() => router.push('/welcome')}>
+          <ThemedText style={styles.loginBtnText}>Sign in (Teacher)</ThemedText>
         </Pressable>
       ) : null}
     </ScreenShell>
@@ -235,6 +266,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   issueBtnText: { color: '#fff', fontWeight: '800' },
+  issueHint: { fontSize: 13, color: LibraryColors.muted, lineHeight: 20 },
+  issueOk: { fontSize: 14, fontWeight: '700', color: '#15803d' },
+  issueErr: { fontSize: 13, color: '#b91c1c', lineHeight: 20 },
   loginBtn: {
     padding: Spacing.three,
     alignItems: 'center',

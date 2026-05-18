@@ -10,7 +10,7 @@ import { api } from '@/services/api';
 import type { ApiIssue } from '@/types/api';
 
 export default function IssuedScreen() {
-  const { isTeacher, token } = useAuth();
+  const { isTeacher, isStudent, token, student, logout } = useAuth();
   const router = useRouter();
   const [issues, setIssues] = useState<ApiIssue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,73 +21,117 @@ export default function IssuedScreen() {
       return;
     }
     try {
-      const data = await api.getActiveIssues(token);
+      const data = isStudent
+        ? await api.getMyIssues(token)
+        : await api.getActiveIssues(token);
       setIssues(data.issues);
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Failed to load');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, isStudent]);
 
   React.useEffect(() => {
     load();
-    const id = setInterval(load, 10000);
+    if (!token) {
+      return;
+    }
+    const id = setInterval(load, 15000);
     return () => clearInterval(id);
-  }, [load]);
+  }, [load, token]);
 
   const onReturn = async (issueId: string) => {
     if (!token) return;
     try {
       await api.returnBook(token, issueId);
       await load();
-      Alert.alert('Success', 'Book library mein wapas aa gayi');
+      Alert.alert('Success', 'Book returned to library');
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Return failed');
     }
   };
 
-  if (!isTeacher) {
+  if (!isTeacher && !isStudent) {
     return (
       <ScrollView contentContainerStyle={styles.centered}>
-        <ThemedText style={styles.title}>Issued Books</ThemedText>
+        <ThemedText style={styles.title}>My Books / Issued</ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.sub}>
-          Kaun si book library mein nahi hai — ye sirf teacher login ke baad student ID ke saath
-          dikhega.
+          Students: sign in to see books issued to you. Teachers: sign in to manage returns.
         </ThemedText>
-        <Pressable style={styles.btn} onPress={() => router.push('/login')}>
-          <ThemedText style={styles.btnText}>Teacher Login</ThemedText>
+        <Pressable style={styles.btn} onPress={() => router.push('/login-student')}>
+          <ThemedText style={styles.btnText}>Student Login</ThemedText>
         </Pressable>
-        <ThemedText themeColor="textSecondary" style={styles.hint}>
-          Students: Books page par green/red badge se availability dekhein.
-        </ThemedText>
+        <Pressable style={[styles.btn, styles.btnOutline]} onPress={() => router.push('/login-teacher')}>
+          <ThemedText style={styles.btnOutlineText}>Teacher Login</ThemedText>
+        </Pressable>
+        <Pressable onPress={() => router.replace('/welcome')}>
+          <ThemedText style={styles.link}>← Library sign in</ThemedText>
+        </Pressable>
       </ScrollView>
     );
   }
+
+  const title = isStudent ? 'My Issued Books' : 'Issued Books';
+  const subtitle = isStudent
+    ? student
+      ? `${student.name} (${student.studentId}) · ${issues.length} book(s) with you`
+      : 'Books currently issued to you'
+    : `${issues.length} books with students`;
 
   return (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
-      <PageHeader
-        badge="Active"
-        title="Issued Books"
-        subtitle={`${issues.length} books abhi students ke paas`}
-      />
+      <PageHeader badge={isStudent ? 'Student' : 'Teacher'} title={title} subtitle={subtitle} />
+
+      {isStudent && student ? (
+        <View style={styles.profileCard}>
+          <ThemedText style={styles.profileLine}>
+            <ThemedText style={styles.profileLabel}>User ID: </ThemedText>
+            {student.userId}
+          </ThemedText>
+          <ThemedText style={styles.profileLine}>
+            <ThemedText style={styles.profileLabel}>ID No: </ThemedText>
+            {student.studentId}
+          </ThemedText>
+          <Pressable style={styles.profileBtn} onPress={() => router.push('/student-profile')}>
+            <ThemedText style={styles.profileBtnText}>Update my profile →</ThemedText>
+          </Pressable>
+          <ThemedText style={styles.profileLine}>
+            <ThemedText style={styles.profileLabel}>Course: </ThemedText>
+            {student.course}
+          </ThemedText>
+          <ThemedText style={styles.profileLine}>
+            <ThemedText style={styles.profileLabel}>Year: </ThemedText>
+            {student.year}
+          </ThemedText>
+          <ThemedText style={styles.profileLine}>
+            <ThemedText style={styles.profileLabel}>Department: </ThemedText>
+            {student.department}
+          </ThemedText>
+        </View>
+      ) : null}
 
       {issues.length === 0 ? (
-        <ThemedText themeColor="textSecondary">Sab books library mein hain ✓</ThemedText>
+        <ThemedText themeColor="textSecondary">
+          {isStudent ? 'No books issued to you right now ✓' : 'All books are in the library ✓'}
+        </ThemedText>
       ) : (
         issues.map((issue) => (
           <View key={issue.id} style={styles.card}>
             <ThemedText style={styles.bookTitle}>{issue.book?.title ?? 'Book'}</ThemedText>
-            <ThemedText style={styles.row}>
-              <ThemedText style={styles.label}>Student ID: </ThemedText>
-              {issue.studentId}
-            </ThemedText>
-            {issue.studentName ? (
-              <ThemedText style={styles.meta}>Name: {issue.studentName}</ThemedText>
+            {!isStudent ? (
+              <>
+                <ThemedText style={styles.row}>
+                  <ThemedText style={styles.label}>Student ID: </ThemedText>
+                  {issue.studentId}
+                </ThemedText>
+                {issue.studentName ? (
+                  <ThemedText style={styles.meta}>Name: {issue.studentName}</ThemedText>
+                ) : null}
+              </>
             ) : null}
             <ThemedText style={styles.meta}>
               Rack {issue.book?.rackNo} · {issue.book?.department}
@@ -95,12 +139,22 @@ export default function IssuedScreen() {
             <ThemedText style={styles.meta}>
               Issued: {new Date(issue.issuedAt).toLocaleString('en-IN')}
             </ThemedText>
-            <Pressable style={styles.returnBtn} onPress={() => onReturn(issue.id)}>
-              <ThemedText style={styles.returnText}>Mark Returned</ThemedText>
-            </Pressable>
+            {isTeacher ? (
+              <Pressable style={styles.returnBtn} onPress={() => onReturn(issue.id)}>
+                <ThemedText style={styles.returnText}>Mark Returned</ThemedText>
+              </Pressable>
+            ) : (
+              <ThemedText style={styles.studentNote}>
+                Return this book at the library desk
+              </ThemedText>
+            )}
           </View>
         ))
       )}
+
+      <Pressable style={styles.logout} onPress={logout}>
+        <ThemedText style={styles.logoutText}>Logout</ThemedText>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -125,14 +179,35 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 24, fontWeight: '800', color: LibraryColors.navy },
   sub: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
-  hint: { fontSize: 13, textAlign: 'center' },
   btn: {
     backgroundColor: LibraryColors.navy,
     padding: Spacing.three,
     borderRadius: Radius.md,
     alignItems: 'center',
   },
+  btnOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: LibraryColors.navy,
+  },
   btnText: { color: '#fff', fontWeight: '800' },
+  btnOutlineText: { color: LibraryColors.navy, fontWeight: '800' },
+  link: {
+    color: LibraryColors.accent,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: Spacing.two,
+  },
+  profileCard: {
+    backgroundColor: LibraryColors.accentSoft,
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    gap: 4,
+  },
+  profileBtn: { marginVertical: Spacing.one },
+  profileBtnText: { color: LibraryColors.accent, fontWeight: '700', fontSize: 14 },
+  profileLine: { fontSize: 14, color: LibraryColors.navy },
+  profileLabel: { fontWeight: '800', color: LibraryColors.accent },
   card: {
     backgroundColor: LibraryColors.card,
     padding: Spacing.four,
@@ -145,6 +220,12 @@ const styles = StyleSheet.create({
   row: { fontSize: 15, color: LibraryColors.navy },
   label: { fontWeight: '800', color: LibraryColors.accent },
   meta: { fontSize: 13, color: LibraryColors.muted },
+  studentNote: {
+    fontSize: 13,
+    color: LibraryColors.success,
+    fontWeight: '600',
+    marginTop: Spacing.one,
+  },
   returnBtn: {
     marginTop: Spacing.two,
     backgroundColor: LibraryColors.success,
@@ -153,4 +234,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   returnText: { color: '#fff', fontWeight: '800' },
+  logout: { alignItems: 'center', padding: Spacing.three, marginTop: Spacing.two },
+  logoutText: { color: LibraryColors.muted, fontWeight: '600' },
 });

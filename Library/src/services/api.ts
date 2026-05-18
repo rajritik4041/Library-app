@@ -1,5 +1,5 @@
 import { API_URL } from '@/config/api';
-import type { ApiBook, ApiIssue, TeacherSession } from '@/types/api';
+import type { ApiBook, ApiIssue, ApiStudent, StudentSession, TeacherSession } from '@/types/api';
 
 async function request<T>(
   path: string,
@@ -36,10 +36,97 @@ export const api = {
       body: JSON.stringify({ teacherId, password }),
     }),
 
+  loginStudent: (userId: string, password: string) =>
+    request<{ token: string; student: StudentSession }>('/api/auth/student/login', {
+      method: 'POST',
+      body: JSON.stringify({ userId, password }),
+    }),
+
+  getStudents: (token: string, search?: string) => {
+    const q = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+    return request<{ students: ApiStudent[] }>(`/api/students${q}`, { token });
+  },
+
+  getStudent: (token: string, studentKey: string) =>
+    request<{ student: ApiStudent }>(`/api/students/${encodeURIComponent(studentKey)}`, { token }),
+
+  /** Lookup by Student ID No only (enrollment / roll) — safe for IDs with slashes */
+  lookupStudentByIdNo: (token: string, studentIdNo: string) =>
+    request<{ student: ApiStudent }>(
+      `/api/students/lookup?${new URLSearchParams({ key: studentIdNo.trim(), by: 'idNo' })}`,
+      { token },
+    ),
+
+  createStudent: (
+    token: string,
+    body: {
+      studentId: string;
+      userId: string;
+      studentUserId?: string;
+      password: string;
+      name: string;
+      mobile: string;
+      course: string;
+      year: string;
+      department: string;
+    },
+  ) =>
+    request<{ student: ApiStudent }>('/api/students', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        ...body,
+        studentUserId: body.studentUserId || body.userId,
+      }),
+    }),
+
+  updateStudent: (
+    token: string,
+    studentKey: string,
+    body: {
+      userId?: string;
+      studentUserId?: string;
+      password?: string;
+      name?: string;
+      mobile?: string;
+      course?: string;
+      year?: string;
+      department?: string;
+    },
+  ) =>
+    request<{ student: ApiStudent }>(`/api/students/${encodeURIComponent(studentKey)}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(body),
+    }),
+
+  deleteStudent: (token: string, studentKey: string) => {
+    const key = encodeURIComponent(String(studentKey).trim().toUpperCase());
+    return request<{ ok: boolean }>(`/api/students/${key}`, {
+      method: 'DELETE',
+      token,
+    });
+  },
+
+  updateMyProfile: (
+    token: string,
+    body: { name?: string; mobile?: string; password?: string },
+  ) =>
+    request<{ student: StudentSession }>('/api/students/me', {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify(body),
+    }),
+
+  getMyIssues: (token: string) =>
+    request<{ issues: ApiIssue[] }>('/api/issues/mine', { token }),
+
   getBooks: () => request<{ books: ApiBook[]; total: number }>('/api/books'),
 
   getBook: (id: string) =>
-    request<{ book: ApiBook; activeIssues: ApiIssue[] }>(`/api/books/${id}`),
+    request<{ book: ApiBook; activeIssues: ApiIssue[] }>(
+      `/api/books/${encodeURIComponent(String(id).trim())}`,
+    ),
 
   getStats: () =>
     request<{
@@ -51,6 +138,9 @@ export const api = {
 
   getActiveIssues: (token: string) =>
     request<{ issues: ApiIssue[] }>('/api/issues/active', { token }),
+
+  getIssueHistory: (token: string) =>
+    request<{ issues: ApiIssue[] }>('/api/issues/history', { token }),
 
   issueBook: (
     token: string,
@@ -84,5 +174,8 @@ export const api = {
     }),
 
   deleteBook: (token: string, catalogId: string) =>
-    request(`/api/books/${catalogId}`, { method: 'DELETE', token }),
+    request(`/api/books/${encodeURIComponent(String(catalogId).trim())}`, {
+      method: 'DELETE',
+      token,
+    }),
 };

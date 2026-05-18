@@ -96,6 +96,18 @@ export default function HomeScreen() {
         <StatCard label="Departments" value={stats.departments} accent="navy" />
       </View>
 
+      <Pressable style={styles.collegeLink} onPress={() => router.replace('/')}>
+        <ThemedText style={styles.collegeLinkText}>← MCAET College Home</ThemedText>
+      </Pressable>
+
+      <Pressable style={styles.accountBar} onPress={() => router.push('/welcome')}>
+        <View style={styles.accountBody}>
+          <ThemedText style={styles.accountTitle}>Library sign in</ThemedText>
+          <ThemedText style={styles.accountDesc}>Student or Teacher · Issue & manage books</ThemedText>
+        </View>
+        <ThemedText style={styles.accountArrow}>→</ThemedText>
+      </Pressable>
+
       <PageHeader title="Quick Access" subtitle="Library management at your fingertips" />
 
       <View style={styles.links}>
@@ -233,6 +245,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: LibraryColors.accent,
+  },
+  collegeLink: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
+  collegeLinkText: { color: LibraryColors.accent, fontWeight: '700', fontSize: 14 },
+  accountBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    backgroundColor: LibraryColors.navy,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+  },
+  accountBody: {
+    flex: 1,
+    gap: 2,
+  },
+  accountTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  accountDesc: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+  },
+  accountArrow: {
+    fontSize: 20,
+    color: LibraryColors.gold,
+    fontWeight: '800',
   },
   statsRow: {
     flexDirection: 'row',

@@ -24,6 +24,8 @@ export type ApiIssue = {
   teacherId?: string;
   teacherName?: string;
   issuedAt: string;
+  status?: 'issued' | 'returned';
+  returnedAt?: string | null;
   book?: {
     id: string;
     title: string;
@@ -35,4 +37,23 @@ export type ApiIssue = {
 export type TeacherSession = {
   teacherId: string;
   name: string;
+};
+
+export type StudentSession = {
+  /** Student ID No (roll / enrollment) — unique */
+  studentId: string;
+  /** Student User ID for login — unique, stored in MongoDB as studentUserId */
+  userId: string;
+  studentUserId?: string;
+  name: string;
+  mobile: string;
+  course: string;
+  year: string;
+  department: string;
+};
+
+export type AuthRole = 'teacher' | 'student';
+
+export type ApiStudent = StudentSession & {
+  createdAt?: string;
 };

@@ -19,16 +19,17 @@ import { useAuth } from '@/context/auth-context';
 import { LibraryColors, MaxContentWidth, Spacing } from '@/constants/theme';
 
 const NAV_ITEMS: { name: string; href: Href; label: string }[] = [
-  { name: 'home', href: '/index', label: 'Home' },
+  { name: 'index', href: '/(tabs)', label: 'Home' },
   { name: 'books', href: '/books', label: 'Books' },
   { name: 'issued', href: '/issued', label: 'Issued' },
+  { name: 'history', href: '/history', label: 'History' },
   { name: 'teacher', href: '/teacher', label: 'Teacher' },
   { name: 'about', href: '/about', label: 'About' },
 ];
 
 export default function AppTabs() {
   const insets = useSafeAreaInsets();
-  const { isTeacher, teacher, logout } = useAuth();
+  const { isTeacher, isStudent, teacher, student, logout } = useAuth();
   const router = useRouter();
 
   return (
@@ -39,13 +40,15 @@ export default function AppTabs() {
             <ThemedText style={styles.brandTitle}>EJ MCAET</ThemedText>
             <ThemedText style={styles.brandSub}>College Library</ThemedText>
           </View>
-          {isTeacher ? (
+          {isTeacher || isStudent ? (
             <Pressable onPress={logout} style={styles.authBtn}>
-              <ThemedText style={styles.authBtnText}>{teacher?.teacherId} · Logout</ThemedText>
+              <ThemedText style={styles.authBtnText}>
+                {isTeacher ? teacher?.teacherId : student?.userId} · Logout
+              </ThemedText>
             </Pressable>
           ) : (
-            <Pressable onPress={() => router.push('/login')} style={styles.authBtn}>
-              <ThemedText style={styles.authBtnText}>Teacher Login</ThemedText>
+            <Pressable onPress={() => router.push('/welcome')} style={styles.authBtn}>
+              <ThemedText style={styles.authBtnText}>Sign in</ThemedText>
             </Pressable>
           )}
         </ThemedView>

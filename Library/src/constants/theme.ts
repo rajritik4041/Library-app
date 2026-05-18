@@ -52,11 +52,11 @@ export const Radius = {
 
 export const Colors = {
   light: {
-    text: LibraryColors.navy,
+    text: '#000000',
     background: LibraryColors.surface,
     backgroundElement: '#e8eef6',
     backgroundSelected: '#d4e0f0',
-    textSecondary: LibraryColors.muted,
+    textSecondary: '#333333',
   },
   dark: {
     text: '#f0f4f8',

@@ -21,8 +21,16 @@ export default function RootLayout() {
                 headerShown: false,
                 contentStyle: { backgroundColor: LibraryColors.surface },
               }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="welcome" />
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="login" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="login-teacher" options={{ presentation: 'card' }} />
+              <Stack.Screen name="login-student" options={{ presentation: 'card' }} />
+              <Stack.Screen name="login" options={{ presentation: 'card' }} />
+              <Stack.Screen name="edit-student" options={{ presentation: 'card' }} />
+              <Stack.Screen name="student/register" options={{ presentation: 'card' }} />
+              <Stack.Screen name="student/[id]" options={{ presentation: 'card' }} />
+              <Stack.Screen name="student-profile" options={{ presentation: 'card' }} />
               <Stack.Screen
                 name="book/[id]"
                 options={{ presentation: 'card', animation: 'slide_from_right' }}

@@ -47,6 +47,22 @@ const teacherSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+const studentSchema = new mongoose.Schema(
+  {
+    /** Student ID No — enrollment / roll (unique, used when issuing books) */
+    studentId: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    /** Student User ID — login username assigned by teacher (unique, stored in MongoDB) */
+    studentUserId: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    passwordHash: { type: String, required: true },
+    name: { type: String, required: true, trim: true },
+    mobile: { type: String, required: true, unique: true, trim: true },
+    course: { type: String, required: true, trim: true },
+    year: { type: String, required: true, trim: true },
+    department: { type: String, required: true, trim: true },
+  },
+  { timestamps: true },
+);
+
 const issueSchema = new mongoose.Schema(
   {
     book: { type: mongoose.Schema.Types.ObjectId, ref: 'Book', required: true },
@@ -63,24 +79,136 @@ const issueSchema = new mongoose.Schema(
 
 const Book = mongoose.model('Book', bookSchema);
 const Teacher = mongoose.model('Teacher', teacherSchema);
+const Student = mongoose.model('Student', studentSchema);
 const Issue = mongoose.model('Issue', issueSchema);
 
-function authTeacher(req, res, next) {
+function verifyToken(req) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Login required' });
+    return null;
   }
   try {
-    const payload = jwt.verify(header.slice(7), JWT_SECRET);
-    req.teacher = payload;
-    next();
+    return jwt.verify(header.slice(7), JWT_SECRET);
   } catch {
-    return res.status(401).json({ error: 'Invalid or expired session' });
+    return null;
   }
+}
+
+function authTeacher(req, res, next) {
+  const payload = verifyToken(req);
+  if (!payload) {
+    return res.status(401).json({ error: 'Login required' });
+  }
+  if (payload.role === 'student') {
+    return res.status(403).json({ error: 'Teacher access required' });
+  }
+  if (!payload.teacherId) {
+    return res.status(401).json({ error: 'Invalid session' });
+  }
+  req.teacher = payload;
+  next();
+}
+
+function authStudent(req, res, next) {
+  const payload = verifyToken(req);
+  if (!payload) {
+    return res.status(401).json({ error: 'Login required' });
+  }
+  if (payload.role !== 'student' || (!payload.studentUserId && !payload.userId && !payload.studentId)) {
+    return res.status(403).json({ error: 'Student access required' });
+  }
+  req.student = payload;
+  next();
+}
+
+function studentPublic(doc) {
+  const d = doc?.toObject ? doc.toObject() : doc;
+  const loginId = d.studentUserId || d.userId || '';
+  return {
+    studentId: d.studentId,
+    userId: loginId,
+    studentUserId: loginId,
+    name: d.name,
+    mobile: d.mobile,
+    course: d.course,
+    year: d.year,
+    department: d.department,
+    createdAt: d.createdAt,
+  };
+}
+
+function parseStudentUserId(body) {
+  return String(body.studentUserId || body.userId || '')
+    .toUpperCase()
+    .trim();
+}
+
+async function findStudentByLogin(loginId) {
+  const id = String(loginId).toUpperCase().trim();
+  if (!id) return null;
+  if (USE_FILE_MODE) {
+    return fileStore.fileFindStudentByLogin(id);
+  }
+  return Student.findOne({
+    $or: [{ studentUserId: id }, { userId: id }],
+  });
+}
+
+async function findStudentByIdNo(idNo) {
+  const id = String(idNo).toUpperCase().trim();
+  if (USE_FILE_MODE) {
+    return fileStore.fileFindStudent(id);
+  }
+  return Student.findOne({ studentId: id });
+}
+
+/** Lookup by Student User ID, legacy userId, or Student ID No */
+async function findStudentByKey(key) {
+  const id = String(key).toUpperCase().trim();
+  if (!id) return null;
+  if (USE_FILE_MODE) {
+    return fileStore.fileFindStudentByKey(id);
+  }
+  return Student.findOne({
+    $or: [{ studentUserId: id }, { userId: id }, { studentId: id }],
+  });
 }
 
 async function getActiveIssueCount(bookId) {
   return Issue.countDocuments({ book: bookId, status: 'issued' });
+}
+
+async function requireRegisteredStudentByIdNo(studentIdInput) {
+  const student = await findStudentByIdNo(studentIdInput);
+  if (!student) {
+    return null;
+  }
+  const doc = student?.toObject ? student.toObject() : student;
+  return {
+    studentId: doc.studentId,
+    name: (doc.name || '').trim(),
+  };
+}
+
+async function findBookByCatalogOrSerial(bookIdInput) {
+  const raw = String(bookIdInput).trim();
+  if (!raw) return null;
+  if (USE_FILE_MODE) {
+    const data = fileStore.fileGetBook(raw);
+    if (data?.book) return { catalogId: String(data.book.id), book: data.book };
+    const books = fileStore.fileGetBooks();
+    const bySerial = books.find((b) => String(b.serialNo) === raw);
+    if (bySerial) {
+      return { catalogId: String(bySerial.id), book: bySerial };
+    }
+    return null;
+  }
+  let book = await Book.findOne({ catalogId: raw });
+  if (!book && /^\d+$/.test(raw)) {
+    book = await Book.findOne({ serialNo: Number(raw) });
+  }
+  if (!book) return null;
+  return { catalogId: book.catalogId, book };
 }
 
 async function enrichBook(book) {
@@ -129,6 +257,34 @@ async function seedFromCatalog() {
   console.log(`Seeded ${docs.length} books from catalog.json`);
 }
 
+async function migrateStudentUserIds() {
+  const all = await Student.find({});
+  let migrated = 0;
+  for (const s of all) {
+    let changed = false;
+    if (!s.studentUserId?.trim()) {
+      s.studentUserId = (s.userId || s.studentId || '').toUpperCase().trim();
+      changed = true;
+    }
+    if (s.userId !== undefined) {
+      s.set('userId', undefined, { strict: false });
+      changed = true;
+    }
+    if (changed) {
+      await s.save();
+      migrated += 1;
+    }
+  }
+  if (migrated > 0) {
+    console.log(`Migrated studentUserId for ${migrated} student(s)`);
+  }
+  try {
+    await Student.syncIndexes();
+  } catch (e) {
+    console.warn('Student index sync:', e.message);
+  }
+}
+
 async function seedTeacher() {
   const teacherId = (process.env.DEFAULT_TEACHER_ID || 'T001').toUpperCase();
   const exists = await Teacher.findOne({ teacherId });
@@ -165,7 +321,7 @@ app.post('/api/auth/teacher/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid teacher ID or password' });
     }
     const token = jwt.sign(
-      { teacherId: teacherRow.teacherId, name: teacherRow.name },
+      { role: 'teacher', teacherId: teacherRow.teacherId, name: teacherRow.name },
       JWT_SECRET,
       { expiresIn: '7d' },
     );
@@ -179,8 +335,295 @@ app.post('/api/auth/teacher/login', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', authTeacher, (req, res) => {
-  res.json({ teacher: req.teacher });
+app.post('/api/auth/student/login', async (req, res) => {
+  try {
+    const loginId = parseStudentUserId(req.body);
+    const { password } = req.body;
+    if (!loginId || !password) {
+      return res.status(400).json({ error: 'Student User ID and password required' });
+    }
+    let studentRow = null;
+    if (USE_FILE_MODE) {
+      studentRow = await fileStore.verifyFileStudent(loginId, password);
+    } else {
+      const student = await findStudentByLogin(loginId);
+      if (student && (await bcrypt.compare(password, student.passwordHash))) {
+        studentRow = studentPublic(student);
+      }
+    }
+    if (!studentRow) {
+      return res.status(401).json({ error: 'Invalid User ID or password' });
+    }
+    const token = jwt.sign(
+      { role: 'student', ...studentRow },
+      JWT_SECRET,
+      { expiresIn: '7d' },
+    );
+    res.json({ token, student: studentRow });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const payload = verifyToken(req);
+  if (!payload) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+  if (payload.role === 'student') {
+    return res.json({
+      role: 'student',
+      student: {
+        studentId: payload.studentId,
+        userId: payload.studentUserId || payload.userId || '',
+        studentUserId: payload.studentUserId || payload.userId || '',
+        name: payload.name,
+        mobile: payload.mobile,
+        course: payload.course,
+        year: payload.year,
+        department: payload.department,
+      },
+    });
+  }
+  res.json({
+    role: 'teacher',
+    teacher: { teacherId: payload.teacherId, name: payload.name },
+  });
+});
+
+// ——— Students (teacher) ———
+app.get('/api/students', authTeacher, async (req, res) => {
+  try {
+    const search = String(req.query.search || '').trim();
+    if (USE_FILE_MODE) {
+      return res.json({ students: fileStore.fileListStudents(search) });
+    }
+    const filter = search
+      ? {
+          $or: [
+            { studentId: { $regex: search, $options: 'i' } },
+            { studentUserId: { $regex: search, $options: 'i' } },
+            { name: { $regex: search, $options: 'i' } },
+            { mobile: { $regex: search, $options: 'i' } },
+            { course: { $regex: search, $options: 'i' } },
+            { department: { $regex: search, $options: 'i' } },
+          ],
+        }
+      : {};
+    const students = await Student.find(filter).sort({ createdAt: -1 }).lean();
+    res.json({ students: students.map(studentPublic) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load students' });
+  }
+});
+
+app.get('/api/students/lookup', authTeacher, async (req, res) => {
+  try {
+    const key = String(req.query.key || '').trim();
+    const by = String(req.query.by || 'any');
+    if (!key) {
+      return res.status(400).json({ error: 'Student key required' });
+    }
+    const student = by === 'idNo' ? await findStudentByIdNo(key) : await findStudentByKey(key);
+    if (!student) {
+      return res.status(404).json({ error: 'Student not registered' });
+    }
+    res.json({ student: studentPublic(student) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Lookup failed' });
+  }
+});
+
+app.get('/api/students/:studentKey', authTeacher, async (req, res) => {
+  try {
+    const student = await findStudentByKey(decodeURIComponent(String(req.params.studentKey || '')));
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    res.json({ student: studentPublic(student) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load student' });
+  }
+});
+
+app.post('/api/students', authTeacher, async (req, res) => {
+  try {
+    const { studentId, password, name, mobile, course, year, department } = req.body;
+    const loginId = parseStudentUserId(req.body);
+    if (!studentId?.trim() || !loginId || !password || !name?.trim() || !mobile?.trim()) {
+      return res.status(400).json({
+        error: 'Student ID No, Student User ID, password, name, and mobile are required',
+      });
+    }
+    if (!course?.trim() || !year?.trim() || !department?.trim()) {
+      return res.status(400).json({ error: 'Course, year, and department are required' });
+    }
+    const idNo = String(studentId).toUpperCase().trim();
+    const mobileNorm = String(mobile).trim();
+    if (USE_FILE_MODE) {
+      const student = await fileStore.fileCreateStudent({
+        studentId: idNo,
+        studentUserId: loginId,
+        password,
+        name: name.trim(),
+        mobile: mobileNorm,
+        course: course.trim(),
+        year: year.trim(),
+        department: department.trim(),
+      });
+      return res.status(201).json({ student });
+    }
+    const existsId = await Student.findOne({ studentId: idNo });
+    if (existsId) {
+      return res.status(409).json({ error: 'Student ID No already exists' });
+    }
+    const existsUser = await Student.findOne({ studentUserId: loginId });
+    if (existsUser) {
+      return res.status(409).json({ error: 'Student User ID already exists' });
+    }
+    const existsMobile = await Student.findOne({ mobile: mobileNorm });
+    if (existsMobile) {
+      return res.status(409).json({ error: 'Mobile number already registered' });
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    const student = await Student.create({
+      studentId: idNo,
+      studentUserId: loginId,
+      passwordHash,
+      name: name.trim(),
+      mobile: mobileNorm,
+      course: course.trim(),
+      year: year.trim(),
+      department: department.trim(),
+    });
+    res.status(201).json({ student: studentPublic(student) });
+  } catch (err) {
+    console.error(err);
+    if (err.code === 11000) {
+      const key = Object.keys(err.keyPattern || {})[0] || 'field';
+      return res.status(409).json({ error: `Duplicate ${key} — must be unique` });
+    }
+    res.status(500).json({ error: err.message || 'Failed to create student' });
+  }
+});
+
+app.put('/api/students/:studentKey', authTeacher, async (req, res) => {
+  try {
+    const existing = await findStudentByKey(req.params.studentKey);
+    if (!existing) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    const idNo = existing.studentId;
+    const loginIdInput = parseStudentUserId(req.body);
+    const { password, name, mobile, course, year, department } = req.body;
+    if (USE_FILE_MODE) {
+      const student = await fileStore.fileUpdateStudent(idNo, {
+        studentUserId: loginIdInput || undefined,
+        password,
+        name,
+        mobile,
+        course,
+        year,
+        department,
+      });
+      return res.json({ student });
+    }
+    const student = await Student.findOne({ studentId: idNo });
+    if (loginIdInput) {
+      const clash = await Student.findOne({
+        studentUserId: loginIdInput,
+        studentId: { $ne: idNo },
+      });
+      if (clash) {
+        return res.status(409).json({ error: 'Student User ID already in use' });
+      }
+      student.studentUserId = loginIdInput;
+    }
+    if (name?.trim()) student.name = name.trim();
+    if (mobile?.trim()) {
+      const mobileNorm = mobile.trim();
+      const clashMobile = await Student.findOne({ mobile: mobileNorm, studentId: { $ne: idNo } });
+      if (clashMobile) {
+        return res.status(409).json({ error: 'Mobile number already in use' });
+      }
+      student.mobile = mobileNorm;
+    }
+    if (course?.trim()) student.course = course.trim();
+    if (year?.trim()) student.year = year.trim();
+    if (department?.trim()) student.department = department.trim();
+    if (password) {
+      student.passwordHash = await bcrypt.hash(password, 10);
+    }
+    await student.save();
+    res.json({ student: studentPublic(student) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Failed to update student' });
+  }
+});
+
+app.delete('/api/students/:studentKey', authTeacher, async (req, res) => {
+  try {
+    const rawKey = decodeURIComponent(String(req.params.studentKey || ''));
+    const existing = await findStudentByKey(rawKey);
+    if (!existing) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    const idNo = existing.studentId;
+    if (USE_FILE_MODE) {
+      fileStore.fileDeleteStudent(idNo);
+      return res.json({ ok: true });
+    }
+    const student = await Student.findOne({ studentId: idNo });
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    const activeIssues = await Issue.countDocuments({ studentId: idNo, status: 'issued' });
+    if (activeIssues > 0) {
+      return res.status(400).json({
+        error: 'Cannot delete: student has books issued. Return all books first.',
+      });
+    }
+    await Student.deleteOne({ _id: student._id });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Failed to delete student' });
+  }
+});
+
+/** Student updates own profile (mobile / password) */
+app.patch('/api/students/me', authStudent, async (req, res) => {
+  try {
+    const { mobile, password, name } = req.body;
+    const idNo = req.student.studentId;
+    if (USE_FILE_MODE) {
+      const student = await fileStore.fileUpdateStudent(idNo, {
+        mobile,
+        password,
+        name,
+      });
+      return res.json({ student });
+    }
+    const student = await Student.findOne({ studentId: idNo });
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    if (name?.trim()) student.name = name.trim();
+    if (mobile?.trim()) student.mobile = mobile.trim();
+    if (password) {
+      student.passwordHash = await bcrypt.hash(password, 10);
+    }
+    await student.save();
+    res.json({ student: studentPublic(student) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Update failed' });
+  }
 });
 
 // ——— Books ———
@@ -201,14 +644,19 @@ app.get('/api/books', async (_req, res) => {
 
 app.get('/api/books/:catalogId', async (req, res) => {
   try {
+    const catalogKey = decodeURIComponent(String(req.params.catalogId || ''));
     if (USE_FILE_MODE) {
-      const data = fileStore.fileGetBook(req.params.catalogId);
+      const data = fileStore.fileGetBook(catalogKey);
       if (!data) {
         return res.status(404).json({ error: 'Book not found' });
       }
       return res.json(data);
     }
-    const book = await Book.findOne({ catalogId: req.params.catalogId });
+    const found = await findBookByCatalogOrSerial(catalogKey);
+    if (!found) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    const book = await Book.findOne({ catalogId: found.catalogId });
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
@@ -274,11 +722,20 @@ app.post('/api/books', authTeacher, async (req, res) => {
 
 app.delete('/api/books/:catalogId', authTeacher, async (req, res) => {
   try {
+    const catalogKey = decodeURIComponent(String(req.params.catalogId || ''));
     if (USE_FILE_MODE) {
-      fileStore.fileDeleteBook(req.params.catalogId);
+      const found = await findBookByCatalogOrSerial(catalogKey);
+      if (!found) {
+        return res.status(404).json({ error: 'Book not found' });
+      }
+      fileStore.fileDeleteBook(found.catalogId);
       return res.json({ ok: true });
     }
-    const book = await Book.findOne({ catalogId: req.params.catalogId });
+    const found = await findBookByCatalogOrSerial(catalogKey);
+    if (!found) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    const book = await Book.findOne({ catalogId: found.catalogId });
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
@@ -295,6 +752,79 @@ app.delete('/api/books/:catalogId', authTeacher, async (req, res) => {
 });
 
 // ——— Issues ———
+app.get('/api/issues/mine', authStudent, async (req, res) => {
+  try {
+    const studentId = req.student.studentId;
+    if (USE_FILE_MODE) {
+      return res.json({ issues: fileStore.fileGetStudentIssues(studentId) });
+    }
+    const issues = await Issue.find({ studentId, status: 'issued' })
+      .populate('book')
+      .sort({ issuedAt: -1 })
+      .lean();
+    res.json({
+      issues: issues.map((i) => ({
+        id: i._id.toString(),
+        studentId: i.studentId,
+        studentName: i.studentName,
+        issuedAt: i.issuedAt,
+        book: i.book
+          ? {
+              id: i.book.catalogId,
+              title: i.book.title,
+              rackNo: i.book.rackNo,
+              department: i.book.department,
+            }
+          : null,
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load your books' });
+  }
+});
+
+function mapIssueHistoryRow(i, bookDoc) {
+  return {
+    id: i._id?.toString?.() || i.id,
+    studentId: i.studentId,
+    studentName: i.studentName || '',
+    teacherId: i.teacherId,
+    teacherName: i.teacherName || '',
+    status: i.status,
+    issuedAt: i.issuedAt,
+    returnedAt: i.returnedAt || null,
+    book: bookDoc
+      ? {
+          id: bookDoc.catalogId || bookDoc.id,
+          title: bookDoc.title,
+          rackNo: bookDoc.rackNo,
+          department: bookDoc.department,
+        }
+      : null,
+  };
+}
+
+app.get('/api/issues/history', authTeacher, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 300, 1), 500);
+    if (USE_FILE_MODE) {
+      return res.json({ issues: fileStore.fileGetIssueHistory(limit) });
+    }
+    const issues = await Issue.find()
+      .populate('book')
+      .sort({ issuedAt: -1 })
+      .limit(limit)
+      .lean();
+    res.json({
+      issues: issues.map((i) => mapIssueHistoryRow(i, i.book)),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load issue history' });
+  }
+});
+
 app.get('/api/issues/active', authTeacher, async (_req, res) => {
   try {
     if (USE_FILE_MODE) {
@@ -332,27 +862,43 @@ app.post('/api/issues', authTeacher, async (req, res) => {
   try {
     const { bookId, studentId, studentName } = req.body;
     if (!bookId || !studentId?.trim()) {
-      return res.status(400).json({ error: 'Book ID and Student ID required' });
+      return res.status(400).json({ error: 'Book ID and Student ID No required' });
     }
+    const registered = await requireRegisteredStudentByIdNo(studentId);
+    if (!registered) {
+      return res.status(400).json({
+        error: 'Student not registered. Pehle teacher panel se student register karein (ID No se).',
+      });
+    }
+    const sid = registered.studentId;
+    const resolvedName = registered.name || studentName?.trim() || '';
+    if (!resolvedName) {
+      return res.status(400).json({ error: 'Student name missing — update student profile' });
+    }
+    const bookLookup = await findBookByCatalogOrSerial(bookId);
+    if (!bookLookup) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    const catalogId = bookLookup.catalogId;
     if (USE_FILE_MODE) {
       const { id, book, issuedAt } = fileStore.filePostIssue({
-        bookId: String(bookId),
-        studentId,
-        studentName,
+        bookId: catalogId,
+        studentId: sid,
+        studentName: resolvedName,
         teacherId: req.teacher.teacherId,
         teacherName: req.teacher.name,
       });
       return res.status(201).json({
         issue: {
           id,
-          studentId: String(studentId).toUpperCase().trim(),
-          studentName,
+          studentId: sid,
+          studentName: resolvedName,
           issuedAt,
         },
         book,
       });
     }
-    const book = await Book.findOne({ catalogId: String(bookId) });
+    const book = await Book.findOne({ catalogId });
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
@@ -362,8 +908,8 @@ app.post('/api/issues', authTeacher, async (req, res) => {
     }
     const issue = await Issue.create({
       book: book._id,
-      studentId: String(studentId).toUpperCase().trim(),
-      studentName: studentName?.trim() || '',
+      studentId: sid,
+      studentName: resolvedName,
       teacherId: req.teacher.teacherId,
       teacherName: req.teacher.name,
       status: 'issued',
@@ -487,6 +1033,7 @@ async function start() {
       USE_FILE_MODE = false;
       console.log('MongoDB connected');
       await seedTeacher();
+      await migrateStudentUserIds();
       await seedFromCatalog();
     } catch (e) {
       console.warn('MongoDB connect failed → FILE mode:', e.message);
