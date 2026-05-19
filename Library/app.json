@@ -44,6 +44,7 @@
     },
     "extra": {
       "router": {},
+      "apiUrl": "https://library-app-2-e5ly.onrender.com",
       "eas": {
         "projectId": "98813608-3376-4f08-87a7-f4eee501afee"
       }

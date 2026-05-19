@@ -10,6 +10,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "start-web": "expo start --web",
+    "desktop": "concurrently -k -n web,electron -c blue,magenta \"npm run start-web\" \"wait-on http://127.0.0.1:8081 && electron electron/main.js\"",
+    "export-web": "cross-env EXPO_PUBLIC_API_URL=https://library-app-2-e5ly.onrender.com expo export --platform web",
+    "desktop:prod": "npm run export-web && cross-env NODE_ENV=production electron electron/main.js",
+    "preexport-web": "node ./scripts/import-books.js",
+    "desktop:pack": "npm run export-web && node ./scripts/prepare-desktop-pack.js && node ./scripts/run-desktop-pack.js",
     "import-books": "node ./scripts/import-books.js",
     "watch-books": "node ./scripts/watch-excel.js",
     "server": "npm run start --prefix server",
@@ -49,7 +55,12 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^35.7.5",
+    "electron-builder": "^26.8.1",
     "typescript": "~5.9.2",
+    "wait-on": "^8.0.5",
     "xlsx": "^0.18.5"
   },
   "private": true

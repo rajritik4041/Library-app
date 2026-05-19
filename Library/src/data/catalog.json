@@ -2,10 +2,10 @@
   "meta": {
     "sourceFile": "assets/sheets.xlsx",
     "sheetName": "Sheet1",
-    "updatedAt": "2026-05-19T06:20:05.790Z",
-    "totalBooks": 74,
-    "totalCopies": 136,
-    "checksum": "500bf812b794d04d4fd32e35f6a1288f"
+    "updatedAt": "2026-05-19T13:56:10.636Z",
+    "totalBooks": 75,
+    "totalCopies": 158,
+    "checksum": "103bafb9121ea1389a6ce79d46f04432"
   },
   "books": [
     {
@@ -821,6 +821,17 @@
       "department": "BEAS",
       "subject": "Math",
       "copies": 1
+    },
+    {
+      "id": "77",
+      "serialNo": 77,
+      "rackNo": "1222",
+      "title": "Welding And Welding Technology",
+      "authors": "wew",
+      "publisher": "eww",
+      "department": "we",
+      "subject": "qw",
+      "copies": 22
     }
   ]
 }

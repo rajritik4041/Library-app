@@ -22,8 +22,9 @@ const NAV_ITEMS: { name: string; href: Href; label: string }[] = [
   { name: 'index', href: '/(tabs)', label: 'Home' },
   { name: 'books', href: '/books', label: 'Books' },
   { name: 'issued', href: '/issued', label: 'Issued' },
-  { name: 'history', href: '/history', label: 'History' },
   { name: 'teacher', href: '/teacher', label: 'Teacher' },
+  { name: 'history', href: '/history', label: 'History' },
+  { name: 'departments', href: '/departments', label: 'Depts' },
   { name: 'about', href: '/about', label: 'About' },
 ];
 
