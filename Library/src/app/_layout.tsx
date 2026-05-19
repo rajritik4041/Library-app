@@ -24,8 +24,8 @@ export default function RootLayout() {
               <Stack.Screen name="index" />
               <Stack.Screen name="welcome" />
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="login-teacher" options={{ presentation: 'card' }} />
-              <Stack.Screen name="login-student" options={{ presentation: 'card' }} />
+              <Stack.Screen name="login-teacher " options={{ presentation: 'card' }} />
+              <Stack.Screen name="login-student " options={{ presentation: 'card' }} />
               <Stack.Screen name="login" options={{ presentation: 'card' }} />
               <Stack.Screen name="edit-student" options={{ presentation: 'card' }} />
               <Stack.Screen name="student/register" options={{ presentation: 'card' }} />

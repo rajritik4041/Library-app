@@ -1,7 +1,8 @@
 /**
  * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+
+*/
 
 import '@/global.css';
 
@@ -47,7 +48,7 @@ export const Radius = {
   md: 12,
   lg: 16,
   xl: 20,
-  pill: 999,
+  pill: 999 ,
 } as const;
 
 export const Colors = {
