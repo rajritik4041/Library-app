@@ -23,11 +23,11 @@ export default function CollegeHomeScreen() {
 
   const openLibrary = () => {
     if (isTeacher) {
-      router.push('/(tabs)/teacher');
+      router.replace('/(tabs)/teacher');
       return;
     }
     if (isStudent) {
-      router.push('/(tabs)/issued');
+      router.replace('/(tabs)/issued');
       return;
     }
     router.push('/welcome');

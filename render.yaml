@@ -15,8 +15,9 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: USE_FILE_STORE
-        value: "1"
+      # Do NOT set USE_FILE_STORE=1 — MongoDB required for login/students/issues
+      - key: MONGODB_URI
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: DEFAULT_TEACHER_ID

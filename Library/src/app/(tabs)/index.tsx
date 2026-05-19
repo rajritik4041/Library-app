@@ -1,16 +1,15 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { PageHeader } from '@/components/library/page-header';
 import { ScreenShell } from '@/components/library/screen-shell';
 import { StatCard } from '@/components/library/stat-card';
 import { ThemedText } from '@/components/themed-text';
 import { useBooksApi } from '@/context/books-api-context';
-import { useLibrary } from '@/context/library-context';
+import { getDepartmentLabel } from '@/constants/departments';
 import { LibraryColors, Radius, Spacing } from '@/constants/theme';
-import { getUniqueDepartments, getUniqueRacks } from '@/lib/books';
 import { useTheme } from '@/hooks/use-theme';
 
 const QUICK_LINKS = [
@@ -20,43 +19,68 @@ const QUICK_LINKS = [
 ];
 
 export default function HomeScreen() {
-  const { stats, meta } = useLibrary();
-  const { books, apiOnline } = useBooksApi();
-  const departments = getUniqueDepartments();
-  const racks = getUniqueRacks();
+  const {
+    books,
+    loading,
+    error,
+    apiOnline,
+    dataSource,
+    stats,
+    departments,
+    racks,
+    refresh,
+  } = useBooksApi();
   const router = useRouter();
   const theme = useTheme();
   const [rackQuery, setRackQuery] = useState('');
 
   const searchByRack = () => {
     const q = rackQuery.trim();
-    if (!q) {
-      return;
-    }
+    if (!q) return;
     router.push({ pathname: '/books', params: { rack: q } });
   };
 
-  const updatedDate = new Date(meta.updatedAt).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  const sourceLabel =
+    dataSource === 'mongodb'
+      ? 'MongoDB · Live'
+      : dataSource === 'offline-cache'
+        ? 'Offline cache'
+        : 'No data';
+
+  if (loading && books.length === 0) {
+    return (
+      <ScreenShell scroll={false}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={LibraryColors.accent} />
+          <ThemedText style={styles.loadingText}>MongoDB se library load ho rahi hai…</ThemedText>
+        </View>
+      </ScreenShell>
+    );
+  }
 
   return (
     <ScreenShell>
+      {error ? (
+        <Pressable style={styles.banner} onPress={refresh}>
+          <ThemedText style={styles.bannerText}>⚠ {error} · Tap to retry</ThemedText>
+        </Pressable>
+      ) : null}
+
       <LinearGradient
         colors={[LibraryColors.navy, LibraryColors.navyMid, LibraryColors.navyLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}>
         <View style={styles.heroBadge}>
-          <ThemedText style={styles.heroBadgeText}>EJ MCAET College</ThemedText>
+          <ThemedText style={styles.heroBadgeText}>{sourceLabel}</ThemedText>
         </View>
         <ThemedText style={styles.heroTitle}>Central Library</ThemedText>
         <ThemedText style={styles.heroSubtitle}>
-          {apiOnline ? books.length : stats.totalTitles} books · Live library status · Rack search
+          {stats.totalTitles} books · {stats.availableCopies} copies in library · Rack search
         </ThemedText>
-        <ThemedText style={styles.heroMeta}>Data synced {updatedDate}</ThemedText>
+        <ThemedText style={styles.heroMeta}>
+          {apiOnline ? 'Connected to college database' : 'Showing cached data — connect for live updates'}
+        </ThemedText>
       </LinearGradient>
 
       <View style={styles.rackSearchBox}>
@@ -88,8 +112,12 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.statsRow}>
-        <StatCard label="Book Titles" value={stats.totalTitles} hint="From Excel" accent="navy" />
+        <StatCard label="Book Titles" value={stats.totalTitles} hint="MongoDB" accent="navy" />
         <StatCard label="Total Copies" value={stats.totalCopies} accent="gold" />
+      </View>
+      <View style={styles.statsRow}>
+        <StatCard label="In Library" value={stats.availableCopies} accent="teal" />
+        <StatCard label="Issued Now" value={stats.activeIssues} accent="navy" />
       </View>
       <View style={styles.statsRow}>
         <StatCard label="Racks" value={stats.racks} accent="teal" />
@@ -136,7 +164,9 @@ export default function HomeScreen() {
               key={dept}
               style={styles.deptTag}
               onPress={() => router.push({ pathname: '/books', params: { department: dept } })}>
-              <ThemedText style={styles.deptTagText}>{dept}</ThemedText>
+              <ThemedText style={styles.deptTagText}>
+                {dept} · {getDepartmentLabel(dept)}
+              </ThemedText>
             </Pressable>
           ))}
         </View>
@@ -146,6 +176,28 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.three,
+    padding: Spacing.five,
+  },
+  loadingText: {
+    color: LibraryColors.muted,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  banner: {
+    backgroundColor: '#fef3c7',
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+  },
+  bannerText: {
+    color: '#92400e',
+    fontWeight: '600',
+    fontSize: 13,
+  },
   hero: {
     borderRadius: Radius.xl,
     padding: Spacing.four,
@@ -192,10 +244,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: LibraryColors.border,
     gap: Spacing.three,
-    shadowColor: LibraryColors.navy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
     elevation: 3,
   },
   rackSearchTitle: {
@@ -256,32 +304,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.four,
   },
-  accountBody: {
-    flex: 1,
-    gap: 2,
-  },
-  accountTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  accountDesc: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.75)',
-  },
-  accountArrow: {
-    fontSize: 20,
-    color: LibraryColors.gold,
-    fontWeight: '800',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: Spacing.three,
-    flexWrap: 'wrap',
-  },
-  links: {
-    gap: Spacing.three,
-  },
+  accountBody: { flex: 1, gap: 2 },
+  accountTitle: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  accountDesc: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+  accountArrow: { fontSize: 20, color: LibraryColors.gold, fontWeight: '800' },
+  statsRow: { flexDirection: 'row', gap: Spacing.three, flexWrap: 'wrap' },
+  links: { gap: Spacing.three },
   linkCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -291,15 +319,9 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderWidth: 1,
     borderColor: LibraryColors.border,
-    shadowColor: LibraryColors.navy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
     elevation: 2,
   },
-  linkCardPressed: {
-    borderColor: LibraryColors.accent,
-  },
+  linkCardPressed: { borderColor: LibraryColors.accent },
   linkIconWrap: {
     width: 48,
     height: 48,
@@ -308,41 +330,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  linkEmoji: {
-    fontSize: 24,
-  },
-  linkBody: {
-    flex: 1,
-    gap: 4,
-  },
-  linkTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: LibraryColors.navy,
-  },
-  linkDesc: {
-    fontSize: 13,
-    color: LibraryColors.muted,
-  },
-  linkArrow: {
-    fontSize: 22,
-    color: LibraryColors.accent,
-    fontWeight: '700',
-  },
-  deptPreview: {
-    gap: Spacing.two,
-    paddingBottom: Spacing.four,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: LibraryColors.navy,
-  },
-  deptTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
+  linkEmoji: { fontSize: 24 },
+  linkBody: { flex: 1, gap: 4 },
+  linkTitle: { fontSize: 16, fontWeight: '700', color: LibraryColors.navy },
+  linkDesc: { fontSize: 13, color: LibraryColors.muted },
+  linkArrow: { fontSize: 22, color: LibraryColors.accent, fontWeight: '700' },
+  deptPreview: { gap: Spacing.two, paddingBottom: Spacing.four },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: LibraryColors.navy },
+  deptTags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   deptTag: {
     backgroundColor: LibraryColors.goldMuted,
     paddingHorizontal: Spacing.three,
@@ -351,9 +346,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: LibraryColors.goldLight,
   },
-  deptTagText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: LibraryColors.navy,
-  },
+  deptTagText: { fontSize: 12, fontWeight: '700', color: LibraryColors.navy },
 });

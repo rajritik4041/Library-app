@@ -5,7 +5,6 @@ import { useColorScheme } from 'react-native';
 
 import { AuthProvider } from '@/context/auth-context';
 import { BooksApiProvider } from '@/context/books-api-context';
-import { LibraryProvider } from '@/context/library-context';
 import { LibraryColors } from '@/constants/theme';
 
 export default function RootLayout() {
@@ -15,7 +14,6 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <BooksApiProvider>
-          <LibraryProvider>
             <Stack
               screenOptions={{
                 headerShown: false,
@@ -36,7 +34,6 @@ export default function RootLayout() {
                 options={{ presentation: 'card', animation: 'slide_from_right' }}
               />
             </Stack>
-          </LibraryProvider>
         </BooksApiProvider>
       </AuthProvider>
     </ThemeProvider>

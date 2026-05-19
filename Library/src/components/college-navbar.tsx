@@ -1,6 +1,13 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -8,10 +15,10 @@ import { useAuth } from '@/context/auth-context';
 import { LibraryColors, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 
 const NAV_LINKS = [
-  { label: 'Home', href: '/' as const },
-  { label: 'Library', href: '/welcome' as const },
-  { label: 'Books', href: '/(tabs)/books' as const },
-  { label: 'About', href: '/(tabs)/about' as const },
+  { label: 'Home', href: '/' as const, key: 'home' as const },
+  { label: 'Library', href: '/welcome' as const, key: 'library' as const },
+  { label: 'Books', href: '/(tabs)/books' as const, key: 'books' as const },
+  { label: 'About', href: '/(tabs)/about' as const, key: 'about' as const },
 ];
 
 type CollegeNavbarProps = {
@@ -21,23 +28,30 @@ type CollegeNavbarProps = {
 export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const compact = width < 400;
   const { isTeacher, isStudent, teacher, student, logout } = useAuth();
 
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + Spacing.two }]}>
-      <View style={styles.bar}>
+    <View style={[styles.wrap, { paddingTop: insets.top + (compact ? Spacing.one : Spacing.two) }]}>
+      <View style={[styles.bar, compact && styles.barCompact]}>
         <Pressable onPress={() => router.replace('/')} style={styles.brand}>
-          <ThemedText style={styles.brandTitle}>MCAET</ThemedText>
+          <ThemedText style={[styles.brandTitle, compact && styles.brandTitleCompact]}>
+            MCAET
+          </ThemedText>
           <ThemedText style={styles.brandSub}>Akbarpur</ThemedText>
         </Pressable>
 
-        <View style={styles.links}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.linksScroll}
+          contentContainerStyle={styles.linksContent}>
           {NAV_LINKS.map((link) => {
-            const key = link.label.toLowerCase() as 'home' | 'library' | 'books' | 'about';
-            const isActive = active === key;
+            const isActive = active === link.key;
             return (
               <Pressable
-                key={link.href}
+                key={link.key}
                 onPress={() => router.push(link.href)}
                 style={[styles.link, isActive && styles.linkActive]}>
                 <ThemedText style={[styles.linkText, isActive && styles.linkTextActive]}>
@@ -46,16 +60,18 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
 
         {isTeacher || isStudent ? (
-          <Pressable onPress={logout} style={styles.authBtn}>
+          <Pressable onPress={logout} style={[styles.authBtn, compact && styles.authBtnCompact]}>
             <ThemedText style={styles.authText} numberOfLines={1}>
-              {isTeacher ? teacher?.teacherId : student?.userId}
+              {compact ? 'Logout' : isTeacher ? teacher?.teacherId : student?.userId}
             </ThemedText>
           </Pressable>
         ) : (
-          <Pressable onPress={() => router.push('/welcome')} style={styles.authBtn}>
+          <Pressable
+            onPress={() => router.push('/welcome')}
+            style={[styles.authBtn, compact && styles.authBtnCompact]}>
             <ThemedText style={styles.authText}>Sign in</ThemedText>
           </Pressable>
         )}
@@ -67,7 +83,7 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: LibraryColors.navy,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.two,
     paddingBottom: Spacing.two,
     ...Platform.select({
       web: { position: 'sticky' as const, top: 0, zIndex: 100 },
@@ -80,32 +96,72 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    flexWrap: 'wrap',
+    minHeight: 48,
   },
-  brand: { marginRight: Spacing.two },
-  brandTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
-  brandSub: { color: LibraryColors.goldLight, fontSize: 11, fontWeight: '600' },
-  links: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  barCompact: {
+    flexWrap: 'nowrap',
     gap: Spacing.one,
-    justifyContent: 'center',
+  },
+  brand: {
+    flexShrink: 0,
+    paddingRight: Spacing.one,
+  },
+  brandTitle: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  brandTitleCompact: {
+    fontSize: 15,
+  },
+  brandSub: {
+    color: LibraryColors.goldLight,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  linksScroll: {
+    flex: 1,
+    minWidth: 0,
+  },
+  linksContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 2,
   },
   link: {
     paddingHorizontal: Spacing.two,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: Radius.sm,
   },
-  linkActive: { backgroundColor: 'rgba(255,255,255,0.15)' },
-  linkText: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '600' },
-  linkTextActive: { color: '#fff', fontWeight: '800' },
+  linkActive: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  linkText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  linkTextActive: {
+    color: '#fff',
+    fontWeight: '800',
+  },
   authBtn: {
     backgroundColor: LibraryColors.gold,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.two,
     paddingVertical: 8,
     borderRadius: Radius.md,
-    maxWidth: 100,
+    flexShrink: 0,
+    maxWidth: 88,
   },
-  authText: { color: LibraryColors.navy, fontSize: 12, fontWeight: '800' },
+  authBtnCompact: {
+    maxWidth: 72,
+    paddingHorizontal: 10,
+  },
+  authText: {
+    color: LibraryColors.navy,
+    fontSize: 11,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
 });
