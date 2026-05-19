@@ -7,6 +7,8 @@ import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dns from "dns";
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 import * as fileStore from './file-store.js';
 
@@ -1017,7 +1019,7 @@ app.post('/api/sync-catalog', authTeacher, async (_req, res) => {
 });
 
 async function start() {
-  const uri = process.env.MONGODB_URI;
+  const uri = process.env.MONGODB_URI ;
   const forceFile =
     process.env.USE_FILE_STORE === 'true' ||
     process.env.USE_FILE_STORE === '1' ||
