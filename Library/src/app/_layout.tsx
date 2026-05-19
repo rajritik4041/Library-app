@@ -30,7 +30,7 @@ export default function RootLayout() {
               <Stack.Screen name="edit-student" options={{ presentation: 'card' }} />
               <Stack.Screen name="student/register" options={{ presentation: 'card' }} />
               <Stack.Screen name="student/[id]" options={{ presentation: 'card' }} />
-              <Stack.Screen name="student-profile" options={{ presentation: 'card' }} />
+              <Stack.Screen name="student-profile " options={{ presentation: 'card' }} />
               <Stack.Screen
                 name="book/[id]"
                 options={{ presentation: 'card', animation: 'slide_from_right' }}
