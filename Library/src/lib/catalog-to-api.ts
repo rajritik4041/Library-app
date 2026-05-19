@@ -2,7 +2,7 @@ import { getBooks } from '@/services/catalog-service';
 import type { ApiBook } from '@/types/api';
 import type { Book } from '@/types/book';
 
-/** Excel → catalog.json se list (API ke bina bhi kaam kare) */
+/** Offline fallback only — primary source is MongoDB API */
 export function booksToApiBooks(books: Book[]): ApiBook[] {
   return books.map((b) => ({
     id: b.id,

@@ -10,8 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { useBooksApi } from '@/context/books-api-context';
 import { LibraryColors, Radius, Spacing } from '@/constants/theme';
-import { bookToApi } from '@/lib/catalog-to-api';
-import { getBookById, getDepartmentLabel } from '@/lib/books';
+import { getDepartmentLabel } from '@/constants/departments';
 import { api } from '@/services/api';
 import type { ApiBook, ApiIssue } from '@/types/api';
 import { useTheme } from '@/hooks/use-theme';
@@ -20,7 +19,7 @@ export default function BookDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { isTeacher, token } = useAuth();
-  const { refresh } = useBooksApi();
+  const { refresh, getBookById: getBookFromStore } = useBooksApi();
   const theme = useTheme();
 
   const [book, setBook] = useState<ApiBook | null>(null);
@@ -31,23 +30,20 @@ export default function BookDetailScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const fallback = () => {
-      const b = getBookById(id);
-      if (b) {
-        setBook(bookToApi(b));
-        setActiveIssues([]);
-      } else {
-        setBook(null);
-      }
-    };
     try {
       const data = await api.getBook(id);
       setBook(data.book);
       setActiveIssues(data.activeIssues);
     } catch {
-      fallback();
+      const cached = getBookFromStore(id);
+      if (cached) {
+        setBook(cached);
+        setActiveIssues([]);
+      } else {
+        setBook(null);
+      }
     }
-  }, [id]);
+  }, [id, getBookFromStore]);
 
   useEffect(() => {
     load();

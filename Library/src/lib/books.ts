@@ -1,19 +1,12 @@
-/** Re-exports catalog service for backward compatibility */
+/** MongoDB-first helpers — re-exports for existing imports */
+export { getDepartmentLabel, DEPARTMENT_LABELS } from '@/constants/departments';
 export {
-  DEPARTMENT_LABELS,
-  getBOOKS,
-  getBookById,
-  getBooks,
-  getBooksByDepartment,
-  getBooksByRack,
-  getCatalogMeta,
-  getDepartmentLabel,
-  getLibraryStats,
-  getUniqueDepartments,
-  getUniqueRacks,
-  getUniqueSubjects,
+  deriveStatsFromBooks,
+  uniqueDepartments,
+  uniqueRacks,
+  uniqueSubjects,
+  findApiBookById,
+  booksInDepartment,
+  filterApiBooks,
   matchesRack,
-  normalizeRack,
-  searchBooks,
-  searchBooksDetailed,
-} from '@/services/catalog-service';
+} from '@/lib/api-books';

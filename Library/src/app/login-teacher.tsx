@@ -24,7 +24,7 @@ export default function TeacherLoginScreen() {
     setLoading(true);
     try {
       await loginTeacher(teacherId, password);
-      router.replace('/(tabs)/teacher');
+      router.replace('/(tabs)/teacher' as const);
     } catch (e) {
       Alert.alert('Login failed', e instanceof Error ? e.message : 'Try again');
     } finally {
