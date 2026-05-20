@@ -1,0 +1,40 @@
+{
+  "appId": "com.rajritik.library",
+  "productName": "EJ MCAET Library",
+  "directories": {
+    "output": "../release",
+    "buildResources": "../assets/images"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "asar": true,
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
+  "electronVersion": "35.7.5",
+  "extraMetadata": {
+    "main": "electron/main.js"
+  },
+  "win": {
+    "target": [{ "target": "nsis", "arch": ["x64"] }],
+    "icon": "icon.png",
+    "signAndEditExecutable": false
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "EJ MCAET Library"
+  },
+  "mac": {
+    "target": ["dmg"],
+    "icon": "icon.png"
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "icon": "icon.png"
+  }
+}

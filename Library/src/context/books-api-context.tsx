@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { InteractionManager } from 'react-native';
+import { AppState, InteractionManager, type AppStateStatus } from 'react-native';
 
 import { API_URL } from '@/config/api';
 import { getLocalApiBooks } from '@/lib/catalog-to-api';
@@ -123,8 +123,17 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 30000);
-    return () => clearInterval(id);
+    const id = setInterval(refresh, 12_000);
+
+    const onAppState = (state: AppStateStatus) => {
+      if (state === 'active') void refresh();
+    };
+    const sub = AppState.addEventListener('change', onAppState);
+
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
   }, [refresh]);
 
   const stats = useMemo(

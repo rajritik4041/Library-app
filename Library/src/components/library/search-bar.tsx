@@ -2,8 +2,9 @@ import React from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { LibraryColors, Radius, Shadows, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useLibraryColors } from '@/hooks/use-library-colors';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 type SearchBarProps = {
   value: string;
@@ -22,7 +23,44 @@ export function SearchBar({
   rackMatchCount,
   onClear,
 }: SearchBarProps) {
-  const theme = useTheme();
+  const colors = useLibraryColors();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      wrapper: { gap: Spacing.two },
+      inputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: c.inputBg,
+        borderRadius: Radius.lg,
+        borderWidth: 1.5,
+        borderColor: c.border,
+        overflow: 'hidden',
+      },
+      searchIconWrap: { paddingLeft: Spacing.three, paddingRight: Spacing.one },
+      icon: { fontSize: 18 },
+      input: {
+        flex: 1,
+        fontSize: 16,
+        color: c.inputText,
+        backgroundColor: c.inputBg,
+        paddingVertical: Platform.select({ web: 14, default: Spacing.three }),
+        paddingRight: Spacing.two,
+        outlineStyle: 'none',
+        ...Platform.select({ web: { outlineWidth: 0 } }),
+      } as object,
+      clearBtn: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+      clearText: { fontSize: 14, color: c.inkMuted, fontWeight: '700' },
+      resultRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
+      resultText: { fontSize: 13, fontWeight: '500', color: c.inkMuted },
+      rackHint: {
+        backgroundColor: c.accentSoft,
+        paddingHorizontal: Spacing.two,
+        paddingVertical: 4,
+        borderRadius: Radius.pill,
+      },
+      rackHintText: { fontSize: 12, fontWeight: '600', color: c.accent },
+    }),
+  );
 
   return (
     <View style={styles.wrapper}>
@@ -34,8 +72,8 @@ export function SearchBar({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { color: theme.text }]}
+          placeholderTextColor={colors.inputPlaceholder}
+          style={styles.input}
           autoCapitalize="none"
           autoCorrect={false}
           clearButtonMode="while-editing"
@@ -48,7 +86,7 @@ export function SearchBar({
       </View>
       {resultCount !== undefined ? (
         <View style={styles.resultRow}>
-          <ThemedText themeColor="textSecondary" style={styles.resultText}>
+          <ThemedText style={styles.resultText}>
             {resultCount} book{resultCount === 1 ? '' : 's'} found
           </ThemedText>
           {rackMatchCount !== undefined && rackMatchCount > 0 ? (
@@ -63,62 +101,3 @@ export function SearchBar({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: Spacing.two,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: LibraryColors.card,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    borderColor: LibraryColors.border,
-    overflow: 'hidden',
-  },
-  searchIconWrap: {
-    paddingLeft: Spacing.three,
-    paddingRight: Spacing.one,
-  },
-  icon: {
-    fontSize: 18,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: Platform.select({ web: 14, default: Spacing.three }),
-    paddingRight: Spacing.two,
-    outlineStyle: 'none',
-  } as object,
-  clearBtn: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  clearText: {
-    fontSize: 14,
-    color: LibraryColors.muted,
-    fontWeight: '700',
-  },
-  resultRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  resultText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  rackHint: {
-    backgroundColor: LibraryColors.accentSoft,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 4,
-    borderRadius: Radius.pill,
-  },
-  rackHintText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: LibraryColors.accent,
-  },
-});

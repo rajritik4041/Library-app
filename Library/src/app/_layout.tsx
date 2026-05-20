@@ -1,24 +1,25 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { useColorScheme } from 'react-native';
-
 import { AuthProvider } from '@/context/auth-context';
 import { BooksApiProvider } from '@/context/books-api-context';
-import { LibraryColors } from '@/constants/theme';
+import { ThemePreferenceProvider } from '@/context/theme-preference-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useLibraryColors } from '@/hooks/use-library-colors';
 
-export default function RootLayout() {
+function RootStack() {
   const colorScheme = useColorScheme();
+  const palette = useLibraryColors();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <BooksApiProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: LibraryColors.surface },
-              }}>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: palette.surface },
+        }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="welcome" />
               <Stack.Screen name="(tabs)" />
@@ -28,14 +29,24 @@ export default function RootLayout() {
               <Stack.Screen name="edit-student" options={{ presentation: 'card' }} />
               <Stack.Screen name="student/register" options={{ presentation: 'card' }} />
               <Stack.Screen name="student/[id]" options={{ presentation: 'card' }} />
-              <Stack.Screen name="student-profile " options={{ presentation: 'card' }} />
+              <Stack.Screen name="student-profile" options={{ presentation: 'card' }} />
               <Stack.Screen
                 name="book/[id]"
                 options={{ presentation: 'card', animation: 'slide_from_right' }}
               />
-            </Stack>
+      </Stack>
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemePreferenceProvider>
+      <AuthProvider>
+        <BooksApiProvider>
+          <RootStack />
         </BooksApiProvider>
       </AuthProvider>
-    </ThemeProvider>
+    </ThemePreferenceProvider>
   );
 }

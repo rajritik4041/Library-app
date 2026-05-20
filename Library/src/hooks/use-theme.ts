@@ -3,12 +3,20 @@
  * https://docs.expo.dev/guides/color-schemes/
  */
 
+import { getLibraryPalette } from '@/constants/library-palette';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export function useTheme() {
   const scheme = useColorScheme();
-  const theme = scheme === 'unspecified' ? 'light' : scheme;
+  const palette = getLibraryPalette(scheme);
+  const base = Colors[scheme];
 
-  return Colors[theme];
+  return {
+    ...base,
+    background: palette.surface,
+    backgroundElement: palette.surfaceAlt,
+    text: palette.ink,
+    textSecondary: palette.inkMuted,
+  };
 }

@@ -5,13 +5,29 @@ import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
-import { FormColors, FormStyles } from '@/constants/form-styles';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useFormStyles } from '@/hooks/use-form-styles';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 
 export default function RegisterStudentScreen() {
   const { token, isTeacher } = useAuth();
   const router = useRouter();
+  const { styles: FormStyles, colors: FormColors } = useFormStyles();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      btn: {
+        backgroundColor: c.navy,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        marginTop: Spacing.two,
+        width: '100%',
+      },
+      btnText: { color: '#fff', fontWeight: '800' },
+      back: { color: c.accent, fontWeight: '600', textAlign: 'center', width: '100%' },
+    }),
+  );
 
   const [idNo, setIdNo] = useState('');
   const [userId, setUserId] = useState('');
@@ -87,7 +103,7 @@ export default function RegisterStudentScreen() {
         secureTextEntry={opts?.secure}
         autoCapitalize={opts?.caps ? 'characters' : 'none'}
         keyboardType={opts?.phone ? 'phone-pad' : 'default'}
-        placeholderTextColor={FormColors.placeholder}
+        placeholderTextColor={FormColors.inputPlaceholder}
         style={FormStyles.input}
       />
     </View>
@@ -124,16 +140,3 @@ export default function RegisterStudentScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  btn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    marginTop: Spacing.two,
-    width: '100%',
-  },
-  btnText: { color: '#fff', fontWeight: '800' },
-  back: { color: LibraryColors.accent, fontWeight: '600', textAlign: 'center', width: '100%' },
-});

@@ -15,8 +15,9 @@ import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { useBooksApi } from '@/context/books-api-context';
-import { FormColors, FormStyles } from '@/constants/form-styles';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useFormStyles } from '@/hooks/use-form-styles';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 import { resolveBookCatalogId } from '@/lib/book-id';
 import { confirmAsync } from '@/lib/confirm';
@@ -26,6 +27,80 @@ export default function TeacherScreen() {
   const { isTeacher, token, teacher, logout } = useAuth();
   const { books, refresh } = useBooksApi();
   const router = useRouter();
+  const { styles: FormStyles, colors: FormColors } = useFormStyles();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      historyBtn: {
+        width: '100%',
+        backgroundColor: c.goldMuted,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: c.goldLight,
+        alignItems: 'center',
+      },
+      historyBtnText: {
+        color: c.ink,
+        fontWeight: '800',
+        fontSize: 15,
+      },
+      searchRow: { flexDirection: 'row', gap: Spacing.two, alignItems: 'center', width: '100%' },
+      searchInput: { flex: 1 },
+      searchBtn: {
+        backgroundColor: c.accent,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: Spacing.two,
+        borderRadius: Radius.md,
+      },
+      studentRow: {
+        flexDirection: 'row',
+        gap: Spacing.two,
+        paddingVertical: Spacing.two,
+        borderTopWidth: 1,
+        borderTopColor: c.border,
+        width: '100%',
+      },
+      studentInfo: { flex: 1, gap: 2 },
+      studentIdText: { fontWeight: '800', color: c.ink, fontSize: 14 },
+      studentActions: { gap: Spacing.one, justifyContent: 'center' },
+      smallBtn: {
+        backgroundColor: c.accent,
+        paddingHorizontal: Spacing.two,
+        paddingVertical: 8,
+        borderRadius: Radius.sm,
+        minWidth: 52,
+        alignItems: 'center',
+      },
+      smallBtnDanger: {
+        backgroundColor: '#b91c1c',
+        paddingHorizontal: Spacing.two,
+        paddingVertical: 8,
+        borderRadius: Radius.sm,
+        minWidth: 52,
+        alignItems: 'center',
+        zIndex: 2,
+        ...Platform.select({ web: { cursor: 'pointer' as const } }),
+      },
+      smallBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+      btn: {
+        backgroundColor: c.navy,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        width: '100%',
+      },
+      btnDanger: {
+        backgroundColor: '#b91c1c',
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        width: '100%',
+      },
+      btnText: { color: '#fff', fontWeight: '800' },
+      logout: { alignItems: 'center', padding: Spacing.three, width: '100%' },
+      logoutText: { color: c.inkMuted, fontWeight: '600' },
+    }),
+  );
 
   const [title, setTitle] = useState('');
   const [authors, setAuthors] = useState('');
@@ -217,7 +292,7 @@ export default function TeacherScreen() {
   };
 
   const inputProps = {
-    placeholderTextColor: FormColors.placeholder,
+    placeholderTextColor: FormColors.inputPlaceholder,
     style: FormStyles.input,
   };
 
@@ -368,75 +443,3 @@ export default function TeacherScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  historyBtn: {
-    width: '100%',
-    backgroundColor: LibraryColors.goldMuted,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: LibraryColors.goldLight,
-    alignItems: 'center',
-  },
-  historyBtnText: {
-    color: FormColors.text,
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  searchRow: { flexDirection: 'row', gap: Spacing.two, alignItems: 'center', width: '100%' },
-  searchInput: { flex: 1 },
-  searchBtn: {
-    backgroundColor: LibraryColors.accent,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.md,
-  },
-  studentRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
-    borderTopWidth: 1,
-    borderTopColor: LibraryColors.border,
-    width: '100%',
-  },
-  studentInfo: { flex: 1, gap: 2 },
-  studentIdText: { fontWeight: '800', color: FormColors.text, fontSize: 14 },
-  studentActions: { gap: Spacing.one, justifyContent: 'center' },
-  smallBtn: {
-    backgroundColor: LibraryColors.accent,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 8,
-    borderRadius: Radius.sm,
-    minWidth: 52,
-    alignItems: 'center',
-  },
-  smallBtnDanger: {
-    backgroundColor: '#b91c1c',
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 8,
-    borderRadius: Radius.sm,
-    minWidth: 52,
-    alignItems: 'center',
-    zIndex: 2,
-    ...Platform.select({ web: { cursor: 'pointer' as const } }),
-  },
-  smallBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
-  btn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    width: '100%',
-  },
-  btnDanger: {
-    backgroundColor: '#b91c1c',
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    width: '100%',
-  },
-  btnText: { color: '#fff', fontWeight: '800' },
-  logout: { alignItems: 'center', padding: Spacing.three, width: '100%' },
-  logoutText: { color: FormColors.textMuted, fontWeight: '600' },
-});

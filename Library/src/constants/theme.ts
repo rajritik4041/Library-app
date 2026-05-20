@@ -1,29 +1,19 @@
 /**
  * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+
+*/
 
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
-export const LibraryColors = {
-  navy: '#0a2342',
-  navyMid: '#14325c',
-  navyLight: '#1e4a7a',
-  accent: '#2563eb',
-  accentSoft: '#dbeafe',
-  gold: '#d4a017',
-  goldLight: '#f5e6b8',
-  goldMuted: '#faf3e0',
-  card: '#ffffff',
-  surface: '#eef3f9',
-  surfaceAlt: '#e2eaf4',
-  border: '#c5d4e8',
-  muted: '#5a6d82',
-  success: '#0d9488',
-  shadow: 'rgba(10, 35, 66, 0.12)',
-} as const;
+export { LibraryColors, getLibraryPalette, libraryPaletteDark, libraryPaletteLight } from '@/constants/library-palette';
+export type { LibraryColorScheme } from '@/constants/library-palette';
+
+import { libraryPaletteLight } from '@/constants/library-palette';
+
+const LibraryColors = libraryPaletteLight;
 
 export const Shadows = {
   card: {
@@ -47,7 +37,7 @@ export const Radius = {
   md: 12,
   lg: 16,
   xl: 20,
-  pill: 999,
+  pill: 999 ,
 } as const;
 
 export const Colors = {

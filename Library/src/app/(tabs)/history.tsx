@@ -12,8 +12,9 @@ import {
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
-import { FormColors, FormStyles } from '@/constants/form-styles';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useFormStyles } from '@/hooks/use-form-styles';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 import type { ApiIssue } from '@/types/api';
 
@@ -31,6 +32,76 @@ function formatDt(iso?: string | null) {
 export default function HistoryScreen() {
   const { isTeacher, token } = useAuth();
   const router = useRouter();
+  const { styles: FormStyles } = useFormStyles();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      linkBtn: {
+        alignSelf: 'center',
+        padding: Spacing.two,
+        marginBottom: Spacing.two,
+      },
+      linkBtnText: {
+        color: c.accent,
+        fontWeight: '700',
+        fontSize: 15,
+      },
+      card: {
+        width: '100%',
+        backgroundColor: c.card,
+        borderRadius: Radius.lg,
+        padding: Spacing.four,
+        gap: Spacing.two,
+        borderWidth: 1,
+        borderColor: c.border,
+        alignSelf: 'center',
+      },
+      cardActive: {
+        borderLeftWidth: 4,
+        borderLeftColor: c.accent,
+      },
+      cardReturned: {
+        borderLeftWidth: 4,
+        borderLeftColor: c.success,
+        opacity: 0.92,
+      },
+      statusRow: { flexDirection: 'row' },
+      statusBadge: {
+        fontSize: 11,
+        fontWeight: '800',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        overflow: 'hidden',
+      },
+      badgeActive: {
+        backgroundColor: c.accentSoft,
+        color: c.accent,
+      },
+      badgeReturned: {
+        backgroundColor: '#d1fae5',
+        color: c.success,
+      },
+      bookTitle: {
+        fontSize: 17,
+        fontWeight: '800',
+        color: c.ink,
+      },
+      returnBtn: {
+        marginTop: Spacing.two,
+        backgroundColor: c.success,
+        padding: Spacing.two,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+      },
+      btn: {
+        backgroundColor: c.navy,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+      },
+      btnText: { color: '#fff', fontWeight: '800' },
+    }),
+  );
   const [issues, setIssues] = useState<ApiIssue[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -133,71 +204,3 @@ export default function HistoryScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  linkBtn: {
-    alignSelf: 'center',
-    padding: Spacing.two,
-    marginBottom: Spacing.two,
-  },
-  linkBtnText: {
-    color: LibraryColors.accent,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  card: {
-    width: '100%',
-    backgroundColor: LibraryColors.card,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    gap: Spacing.two,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    alignSelf: 'center',
-  },
-  cardActive: {
-    borderLeftWidth: 4,
-    borderLeftColor: LibraryColors.accent,
-  },
-  cardReturned: {
-    borderLeftWidth: 4,
-    borderLeftColor: LibraryColors.success,
-    opacity: 0.92,
-  },
-  statusRow: { flexDirection: 'row' },
-  statusBadge: {
-    fontSize: 11,
-    fontWeight: '800',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  badgeActive: {
-    backgroundColor: LibraryColors.accentSoft,
-    color: LibraryColors.accent,
-  },
-  badgeReturned: {
-    backgroundColor: '#d1fae5',
-    color: LibraryColors.success,
-  },
-  bookTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: FormColors.text,
-  },
-  returnBtn: {
-    marginTop: Spacing.two,
-    backgroundColor: LibraryColors.success,
-    padding: Spacing.two,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-  },
-  btn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-  },
-  btnText: { color: '#fff', fontWeight: '800' },
-});

@@ -7,7 +7,8 @@ import { PageHeader } from '@/components/library/page-header';
 import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
-import { LibraryColors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 export default function TeacherLoginScreen() {
   const { loginTeacher } = useAuth();
@@ -15,6 +16,16 @@ export default function TeacherLoginScreen() {
   const [teacherId, setTeacherId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      back: {
+        color: c.accent,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: Spacing.four,
+      },
+    }),
+  );
 
   const onLogin = async () => {
     if (!teacherId.trim() || !password) {
@@ -33,7 +44,7 @@ export default function TeacherLoginScreen() {
   };
 
   return (
-    <ScreenShell>
+    <ScreenShell centered>
       <PageHeader
         badge="Teacher"
         title="Teacher Login"
@@ -68,12 +79,3 @@ export default function TeacherLoginScreen() {
     </ScreenShell>
   );
 }
-
-const styles = StyleSheet.create({
-  back: {
-    color: LibraryColors.accent,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: Spacing.four,
-  },
-});

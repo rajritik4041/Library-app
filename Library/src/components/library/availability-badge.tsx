@@ -2,7 +2,8 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { LibraryColors, Radius } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import type { BookStatus } from '@/types/api';
 
 type AvailabilityBadgeProps = {
@@ -13,6 +14,32 @@ type AvailabilityBadgeProps = {
 
 export function AvailabilityBadge({ status, availableCount, copies }: AvailabilityBadgeProps) {
   const available = status === 'available';
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      badge: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: Radius.pill,
+      },
+      available: {
+        backgroundColor: c.successSoft,
+      },
+      issued: {
+        backgroundColor: c.dangerSoft,
+      },
+      text: {
+        fontSize: 12,
+        fontWeight: '800',
+      },
+      textAvailable: {
+        color: c.success,
+      },
+      textIssued: {
+        color: c.danger,
+      },
+    }),
+  );
 
   return (
     <View style={[styles.badge, available ? styles.available : styles.issued]}>
@@ -22,28 +49,3 @@ export function AvailabilityBadge({ status, availableCount, copies }: Availabili
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-  },
-  available: {
-    backgroundColor: '#d1fae5',
-  },
-  issued: {
-    backgroundColor: '#fee2e2',
-  },
-  text: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  textAvailable: {
-    color: '#065f46',
-  },
-  textIssued: {
-    color: '#991b1b',
-  },
-});

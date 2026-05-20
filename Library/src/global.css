@@ -1,6 +1,37 @@
 body {
   background: linear-gradient(165deg, #eef3f9 0%, #e2eaf4 45%, #eef3f9 100%);
   min-height: 100vh;
+  color: #0a2342;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(165deg, #0a1628 0%, #0f1f38 45%, #0a1628 100%);
+    color: #e8eef4;
+  }
+}
+
+html[data-library-theme='dark'] body {
+  background: linear-gradient(165deg, #0a1628 0%, #0f1f38 45%, #0a1628 100%);
+  color: #e8eef4;
+}
+
+html[data-library-theme='light'] body {
+  background: linear-gradient(165deg, #eef3f9 0%, #e2eaf4 45%, #eef3f9 100%);
+  color: #0a2342;
+}
+
+html[data-library-theme='dark'] input,
+html[data-library-theme='dark'] textarea,
+html[data-library-theme='light'] input,
+html[data-library-theme='light'] textarea {
+  color-scheme: inherit;
+}
+
+html[data-library-theme='dark'] input::placeholder,
+html[data-library-theme='dark'] textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
 }
 
 :root {

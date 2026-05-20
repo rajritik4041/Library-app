@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
-import { LibraryColors, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' as const, key: 'home' as const },
@@ -31,6 +33,93 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
   const { width } = useWindowDimensions();
   const compact = width < 400;
   const { isTeacher, isStudent, teacher, student, logout } = useAuth();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      wrap: {
+        backgroundColor: c.navy,
+        paddingHorizontal: Spacing.two,
+        paddingBottom: Spacing.two,
+        ...Platform.select({
+          web: { position: 'sticky' as const, top: 0, zIndex: 100 },
+        }),
+      },
+      bar: {
+        maxWidth: MaxContentWidth,
+        width: '100%',
+        alignSelf: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.two,
+        minHeight: 48,
+      },
+      barCompact: {
+        flexWrap: 'nowrap',
+        gap: Spacing.one,
+      },
+      brand: {
+        flexShrink: 0,
+        paddingRight: Spacing.one,
+      },
+      brandTitle: {
+        color: '#fff',
+        fontSize: 17,
+        fontWeight: '800',
+      },
+      brandTitleCompact: {
+        fontSize: 15,
+      },
+      brandSub: {
+        color: c.goldLight,
+        fontSize: 10,
+        fontWeight: '600',
+      },
+      linksScroll: {
+        flex: 1,
+        minWidth: 0,
+      },
+      linksContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 2,
+      },
+      link: {
+        paddingHorizontal: Spacing.two,
+        paddingVertical: 8,
+        borderRadius: Radius.sm,
+      },
+      linkActive: {
+        backgroundColor: 'rgba(255,255,255,0.18)',
+      },
+      linkText: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 13,
+        fontWeight: '600',
+      },
+      linkTextActive: {
+        color: '#fff',
+        fontWeight: '800',
+      },
+      authBtn: {
+        backgroundColor: c.gold,
+        paddingHorizontal: Spacing.two,
+        paddingVertical: 8,
+        borderRadius: Radius.md,
+        flexShrink: 0,
+        maxWidth: 88,
+      },
+      authBtnCompact: {
+        maxWidth: 72,
+        paddingHorizontal: 10,
+      },
+      authText: {
+        color: c.navy,
+        fontSize: 11,
+        fontWeight: '800',
+        textAlign: 'center',
+      },
+    }),
+  );
 
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + (compact ? Spacing.one : Spacing.two) }]}>
@@ -62,6 +151,8 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
           })}
         </ScrollView>
 
+        <ThemeToggle onDark compact={compact} />
+
         {isTeacher || isStudent ? (
           <Pressable onPress={logout} style={[styles.authBtn, compact && styles.authBtnCompact]}>
             <ThemedText style={styles.authText} numberOfLines={1}>
@@ -79,89 +170,3 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    backgroundColor: LibraryColors.navy,
-    paddingHorizontal: Spacing.two,
-    paddingBottom: Spacing.two,
-    ...Platform.select({
-      web: { position: 'sticky' as const, top: 0, zIndex: 100 },
-    }),
-  },
-  bar: {
-    maxWidth: MaxContentWidth,
-    width: '100%',
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    minHeight: 48,
-  },
-  barCompact: {
-    flexWrap: 'nowrap',
-    gap: Spacing.one,
-  },
-  brand: {
-    flexShrink: 0,
-    paddingRight: Spacing.one,
-  },
-  brandTitle: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  brandTitleCompact: {
-    fontSize: 15,
-  },
-  brandSub: {
-    color: LibraryColors.goldLight,
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  linksScroll: {
-    flex: 1,
-    minWidth: 0,
-  },
-  linksContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 2,
-  },
-  link: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 8,
-    borderRadius: Radius.sm,
-  },
-  linkActive: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  linkText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  linkTextActive: {
-    color: '#fff',
-    fontWeight: '800',
-  },
-  authBtn: {
-    backgroundColor: LibraryColors.gold,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 8,
-    borderRadius: Radius.md,
-    flexShrink: 0,
-    maxWidth: 88,
-  },
-  authBtnCompact: {
-    maxWidth: 72,
-    paddingHorizontal: 10,
-  },
-  authText: {
-    color: LibraryColors.navy,
-    fontSize: 11,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-});
