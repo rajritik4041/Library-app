@@ -6,7 +6,8 @@ import { PageHeader } from '@/components/library/page-header';
 import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { useBooksApi } from '@/context/books-api-context';
-import { LibraryColors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 const RULES = [
   'Library card is mandatory for book issue.',
@@ -24,6 +25,60 @@ const TIMINGS = [
 
 export default function AboutScreen() {
   const { stats, apiOnline, dataSource, refresh } = useBooksApi();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      card: {
+        backgroundColor: c.card,
+        borderRadius: Spacing.three,
+        padding: Spacing.four,
+        borderWidth: 1,
+        borderColor: c.border,
+        gap: Spacing.two,
+      },
+      cardTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: c.ink,
+      },
+      paragraph: {
+        fontSize: 15,
+        lineHeight: 24,
+      },
+      rules: {
+        gap: Spacing.two,
+      },
+      ruleRow: {
+        flexDirection: 'row',
+        gap: Spacing.two,
+      },
+      ruleNum: {
+        fontWeight: '700',
+        color: c.accent,
+        width: 20,
+      },
+      ruleText: {
+        flex: 1,
+        fontSize: 14,
+        color: c.ink,
+        lineHeight: 22,
+      },
+      footer: {
+        textAlign: 'center',
+        fontSize: 12,
+        color: c.inkMuted,
+        paddingBottom: Spacing.five,
+      },
+      refreshBtn: {
+        marginTop: Spacing.two,
+        alignSelf: 'flex-start',
+      },
+      refreshText: {
+        color: c.accent,
+        fontWeight: '700',
+        fontSize: 14,
+      },
+    }),
+  );
 
   return (
     <ScreenShell>
@@ -87,56 +142,3 @@ export default function AboutScreen() {
     </ScreenShell>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: LibraryColors.card,
-    borderRadius: Spacing.three,
-    padding: Spacing.four,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    gap: Spacing.two,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: LibraryColors.navy,
-  },
-  paragraph: {
-    fontSize: 15,
-    lineHeight: 24,
-  },
-  rules: {
-    gap: Spacing.two,
-  },
-  ruleRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  ruleNum: {
-    fontWeight: '700',
-    color: LibraryColors.accent,
-    width: 20,
-  },
-  ruleText: {
-    flex: 1,
-    fontSize: 14,
-    color: LibraryColors.navy,
-    lineHeight: 22,
-  },
-  footer: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: LibraryColors.muted,
-    paddingBottom: Spacing.five,
-  },
-  refreshBtn: {
-    marginTop: Spacing.two,
-    alignSelf: 'flex-start',
-  },
-  refreshText: {
-    color: LibraryColors.accent,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-});

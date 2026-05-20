@@ -10,7 +10,8 @@ import { ScreenShell } from '@/components/library/screen-shell';
 import { SearchBar } from '@/components/library/search-bar';
 import { ThemedText } from '@/components/themed-text';
 import { useBooksApi } from '@/context/books-api-context';
-import { LibraryColors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { filterApiBooks, matchesRack } from '@/lib/api-books';
 
 export default function BooksScreen() {
@@ -20,6 +21,34 @@ export default function BooksScreen() {
   }>();
   const { books, apiOnline, error, refresh, loading, subjects, departments: deptList } =
     useBooksApi();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      offline: {
+        backgroundColor: '#fef3c7',
+        padding: Spacing.three,
+        borderRadius: 12,
+      },
+      offlineText: {
+        color: '#92400e',
+        fontWeight: '600',
+        fontSize: 13,
+      },
+      filterBlock: { gap: Spacing.one },
+      filterLabel: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: c.ink,
+      },
+      list: { gap: Spacing.three, paddingBottom: Spacing.four },
+      empty: {
+        alignItems: 'center',
+        padding: Spacing.five,
+        backgroundColor: c.card,
+        borderRadius: 16,
+      },
+      emptyTitle: { fontSize: 18, fontWeight: '700', color: c.ink },
+    }),
+  );
 
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState<string>();
@@ -124,30 +153,3 @@ export default function BooksScreen() {
     </ScreenShell>
   );
 }
-
-const styles = StyleSheet.create({
-  offline: {
-    backgroundColor: '#fef3c7',
-    padding: Spacing.three,
-    borderRadius: 12,
-  },
-  offlineText: {
-    color: '#92400e',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  filterBlock: { gap: Spacing.one },
-  filterLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: LibraryColors.navy,
-  },
-  list: { gap: Spacing.three, paddingBottom: Spacing.four },
-  empty: {
-    alignItems: 'center',
-    padding: Spacing.five,
-    backgroundColor: LibraryColors.card,
-    borderRadius: 16,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: LibraryColors.navy },
-});

@@ -2,8 +2,8 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { FormColors } from '@/constants/form-styles';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 type PageHeaderProps = {
   title: string;
@@ -12,6 +12,44 @@ type PageHeaderProps = {
 };
 
 export function PageHeader({ title, subtitle, badge }: PageHeaderProps) {
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      wrapper: {
+        gap: Spacing.two,
+        paddingBottom: Spacing.two,
+        width: '100%',
+        alignItems: 'center',
+      },
+      badge: {
+        alignSelf: 'flex-start',
+        backgroundColor: c.navy,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: 6,
+        borderRadius: Radius.pill,
+      },
+      badgeText: {
+        color: c.goldLight,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+      },
+      title: {
+        fontSize: 26,
+        lineHeight: 32,
+        fontWeight: '800',
+        color: c.ink,
+        textAlign: 'center',
+      },
+      subtitle: {
+        fontSize: 15,
+        lineHeight: 22,
+        color: c.inkMuted,
+        textAlign: 'center',
+      },
+    }),
+  );
+
   return (
     <View style={styles.wrapper}>
       {badge ? (
@@ -26,39 +64,3 @@ export function PageHeader({ title, subtitle, badge }: PageHeaderProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: Spacing.two,
-    paddingBottom: Spacing.two,
-    width: '100%',
-    alignItems: 'center',
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: LibraryColors.navy,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-  },
-  badgeText: {
-    color: LibraryColors.goldLight,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  title: {
-    fontSize: 26,
-    lineHeight: 32,
-    fontWeight: '800',
-    color: FormColors.text,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: FormColors.textMuted,
-    textAlign: 'center',
-  },
-});

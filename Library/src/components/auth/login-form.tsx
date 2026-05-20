@@ -2,8 +2,9 @@ import React from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { FormColors, FormStyles } from '@/constants/form-styles';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useFormStyles } from '@/hooks/use-form-styles';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 type Field = {
   label: string;
@@ -30,11 +31,33 @@ export function LoginForm({
   submitLabel = 'Login',
   hint,
 }: LoginFormProps) {
+  const { styles: formStyles, colors } = useFormStyles();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      card: {
+        ...formStyles.card,
+        width: '100%',
+      },
+      btn: {
+        backgroundColor: c.navy,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        marginTop: Spacing.two,
+      },
+      btnText: {
+        color: '#fff',
+        fontWeight: '800',
+        fontSize: 16,
+      },
+    }),
+  );
+
   return (
     <View style={styles.card}>
       {fields.map((field) => (
         <View key={field.label}>
-          <ThemedText style={FormStyles.label}>{field.label}</ThemedText>
+          <ThemedText style={formStyles.label}>{field.label}</ThemedText>
           <TextInput
             value={field.value}
             onChangeText={field.onChangeText}
@@ -42,8 +65,8 @@ export function LoginForm({
             secureTextEntry={field.secure}
             autoCapitalize={field.autoCapitalize ?? 'none'}
             keyboardType={field.keyboardType}
-            placeholderTextColor={FormColors.placeholder}
-            style={FormStyles.input}
+            placeholderTextColor={colors.inputPlaceholder}
+            style={formStyles.input}
           />
         </View>
       ))}
@@ -52,26 +75,7 @@ export function LoginForm({
         <ThemedText style={styles.btnText}>{loading ? 'Please wait…' : submitLabel}</ThemedText>
       </Pressable>
 
-      {hint ? <ThemedText style={FormStyles.hint}>{hint}</ThemedText> : null}
+      {hint ? <ThemedText style={formStyles.hint}>{hint}</ThemedText> : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    ...FormStyles.card,
-    width: '100%',
-  },
-  btn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    marginTop: Spacing.two,
-  },
-  btnText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-});

@@ -57,4 +57,22 @@ cd Library
 eas build -p android --profile preview
 ```
 
-API URL: `https://library-app-x9zn.onrender.com` (in eas.json)
+API URL: `https://library-app-2-e5ly.onrender.com` (in eas.json)
+
+## Desktop (Windows / macOS / Linux)
+
+Same app via Expo Web + Electron. End users: sirf `.exe` install — [Library/DESKTOP-USER-HINDI.md](Library/DESKTOP-USER-HINDI.md).
+
+**Installer banana (developer):**
+
+```bat
+build-desktop.bat
+```
+
+Ya:
+
+```bash
+cd Library && npm install && npm run desktop:pack
+```
+
+Output: `Library/release/EJ MCAET Library Setup x.x.x.exe` (~150 MB, cloud API built-in).

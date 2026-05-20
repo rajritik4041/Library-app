@@ -5,13 +5,45 @@ import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
-import { FormColors, FormStyles } from '@/constants/form-styles';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useFormStyles } from '@/hooks/use-form-styles';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 
 export default function StudentProfileScreen() {
   const { token, isStudent, student, updateStudentSession } = useAuth();
   const router = useRouter();
+  const { styles: FormStyles, colors: FormColors } = useFormStyles();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      centered: { flexGrow: 1, padding: Spacing.four, justifyContent: 'center', gap: Spacing.three },
+      infoCard: {
+        backgroundColor: c.accentSoft,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        gap: 4,
+      },
+      infoLine: { fontSize: 14, color: c.ink, fontWeight: '600' },
+      infoHint: { fontSize: 12, color: c.inkMuted, marginTop: Spacing.one },
+      card: {
+        backgroundColor: c.card,
+        padding: Spacing.four,
+        borderRadius: Radius.lg,
+        gap: Spacing.two,
+        borderWidth: 1,
+        borderColor: c.border,
+      },
+      btn: {
+        backgroundColor: c.navy,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        marginTop: Spacing.two,
+      },
+      btnText: { color: '#fff', fontWeight: '800' },
+      back: { color: c.accent, fontWeight: '600', textAlign: 'center' },
+    }),
+  );
   const [name, setName] = useState(student?.name ?? '');
   const [mobile, setMobile] = useState(student?.mobile ?? '');
   const [password, setPassword] = useState('');
@@ -69,7 +101,7 @@ export default function StudentProfileScreen() {
           value={name}
           onChangeText={setName}
           style={FormStyles.input}
-          placeholderTextColor={FormColors.placeholder}
+          placeholderTextColor={FormColors.inputPlaceholder}
         />
         <ThemedText style={FormStyles.label}>Mobile number</ThemedText>
         <TextInput
@@ -77,7 +109,7 @@ export default function StudentProfileScreen() {
           onChangeText={setMobile}
           keyboardType="phone-pad"
           style={FormStyles.input}
-          placeholderTextColor={FormColors.placeholder}
+          placeholderTextColor={FormColors.inputPlaceholder}
         />
         <ThemedText style={FormStyles.label}>New password</ThemedText>
         <TextInput
@@ -85,7 +117,7 @@ export default function StudentProfileScreen() {
           onChangeText={setPassword}
           secureTextEntry
           placeholder="Leave blank to keep current"
-          placeholderTextColor={FormColors.placeholder}
+          placeholderTextColor={FormColors.inputPlaceholder}
           style={FormStyles.input}
         />
         <Pressable style={styles.btn} onPress={onSave} disabled={loading}>
@@ -99,50 +131,3 @@ export default function StudentProfileScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    padding: Spacing.four,
-    gap: Spacing.four,
-    maxWidth: 800,
-    alignSelf: 'center',
-    width: '100%',
-    paddingBottom: 80,
-  },
-  centered: { flexGrow: 1, padding: Spacing.four, justifyContent: 'center', gap: Spacing.three },
-  infoCard: {
-    backgroundColor: LibraryColors.accentSoft,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    gap: 4,
-  },
-  infoLine: { fontSize: 14, color: LibraryColors.navy, fontWeight: '600' },
-  infoHint: { fontSize: 12, color: LibraryColors.muted, marginTop: Spacing.one },
-  card: {
-    backgroundColor: LibraryColors.card,
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
-    gap: Spacing.two,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-  },
-  label: { fontWeight: '700', color: LibraryColors.navy, fontSize: 14 },
-  input: {
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.three,
-    fontSize: 15,
-    backgroundColor: LibraryColors.surface,
-    outlineStyle: 'none',
-  } as object,
-  btn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    marginTop: Spacing.two,
-  },
-  btnText: { color: '#fff', fontWeight: '800' },
-  back: { color: LibraryColors.accent, fontWeight: '600', textAlign: 'center' },
-});

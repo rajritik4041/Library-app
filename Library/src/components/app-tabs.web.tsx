@@ -16,7 +16,8 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { useAuth } from '@/context/auth-context';
-import { LibraryColors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 const NAV_ITEMS: { name: string; href: Href; label: string }[] = [
   { name: 'index', href: '/(tabs)', label: 'Home' },
@@ -32,6 +33,84 @@ export default function AppTabs() {
   const insets = useSafeAreaInsets();
   const { isTeacher, isStudent, teacher, student, logout } = useAuth();
   const router = useRouter();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      root: {
+        flex: 1,
+        backgroundColor: c.surface,
+        paddingTop: Platform.OS === 'web' ? 0 : undefined,
+      },
+      header: {
+        paddingHorizontal: Spacing.three,
+        paddingTop: Spacing.two,
+        paddingBottom: Spacing.two,
+      },
+      headerInner: {
+        maxWidth: MaxContentWidth,
+        width: '100%',
+        alignSelf: 'center',
+        backgroundColor: c.navy,
+        borderRadius: 14,
+        paddingVertical: Spacing.three,
+        paddingHorizontal: Spacing.four,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        ...Platform.select({
+          web: { boxShadow: '0 4px 20px rgba(10, 35, 66, 0.15)' },
+        }),
+      },
+      brandBlock: { gap: 2 },
+      brandTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
+      brandSub: { color: c.goldLight, fontSize: 13, fontWeight: '600' },
+      authBtn: {
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: Spacing.three,
+        paddingVertical: 8,
+        borderRadius: 8,
+      },
+      authBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+      content: { flex: 1, minHeight: 0 },
+      tabSlot: { flex: 1, height: '100%' },
+      tabBar: {
+        borderTopWidth: 1,
+        borderTopColor: c.border,
+        backgroundColor: c.card,
+        paddingTop: Spacing.two,
+        paddingHorizontal: Spacing.one,
+      },
+      tabBarInner: {
+        flexDirection: 'row',
+        maxWidth: MaxContentWidth,
+        width: '100%',
+        alignSelf: 'center',
+        justifyContent: 'space-between',
+      },
+      tabButton: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+        borderRadius: 8,
+      },
+      tabButtonFocused: {
+        backgroundColor: c.accentSoft,
+      },
+      tabLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: c.inkMuted,
+        textAlign: 'center',
+      },
+      tabLabelFocused: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: c.accent,
+        textAlign: 'center',
+      },
+      pressed: { opacity: 0.75 },
+    }),
+  );
 
   return (
     <View style={styles.root}>
@@ -60,10 +139,10 @@ export default function AppTabs() {
           <TabSlot style={styles.tabSlot} />
         </View>
         <TabList asChild>
-          <CustomTabList paddingBottom={Math.max(insets.bottom, Spacing.two)}>
+          <CustomTabList styles={styles} paddingBottom={Math.max(insets.bottom, Spacing.two)}>
             {NAV_ITEMS.map((item) => (
               <TabTrigger key={item.name} name={item.name} href={item.href} asChild>
-                <TabButton>{item.label}</TabButton>
+                <TabButton styles={styles}>{item.label}</TabButton>
               </TabTrigger>
             ))}
           </CustomTabList>
@@ -73,7 +152,14 @@ export default function AppTabs() {
   );
 }
 
-export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+type TabStyles = ReturnType<typeof useThemedStyles<ReturnType<typeof StyleSheet.create>>>;
+
+export function TabButton({
+  children,
+  isFocused,
+  styles,
+  ...props
+}: TabTriggerSlotProps & { styles: TabStyles }) {
   return (
     <Pressable
       {...props}
@@ -92,88 +178,12 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 function CustomTabList({
   paddingBottom,
   children,
+  styles,
   ...props
-}: TabListProps & { paddingBottom?: number }) {
+}: TabListProps & { paddingBottom?: number; styles: TabStyles }) {
   return (
     <View {...props} style={StyleSheet.flatten([styles.tabBar, { paddingBottom }])}>
       <View style={styles.tabBarInner}>{children}</View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: LibraryColors.surface,
-    paddingTop: Platform.OS === 'web' ? 0 : undefined,
-  },
-  header: {
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.two,
-  },
-  headerInner: {
-    maxWidth: MaxContentWidth,
-    width: '100%',
-    alignSelf: 'center',
-    backgroundColor: LibraryColors.navy,
-    borderRadius: 14,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    ...Platform.select({
-      web: { boxShadow: '0 4px 20px rgba(10, 35, 66, 0.15)' },
-    }),
-  },
-  brandBlock: { gap: 2 },
-  brandTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
-  brandSub: { color: LibraryColors.goldLight, fontSize: 13, fontWeight: '600' },
-  authBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  authBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  content: { flex: 1, minHeight: 0 },
-  tabSlot: { flex: 1, height: '100%' },
-  tabBar: {
-    borderTopWidth: 1,
-    borderTopColor: LibraryColors.border,
-    backgroundColor: LibraryColors.card,
-    paddingTop: Spacing.two,
-    paddingHorizontal: Spacing.one,
-  },
-  tabBarInner: {
-    flexDirection: 'row',
-    maxWidth: MaxContentWidth,
-    width: '100%',
-    alignSelf: 'center',
-    justifyContent: 'space-between',
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 8,
-  },
-  tabButtonFocused: {
-    backgroundColor: LibraryColors.accentSoft,
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: LibraryColors.muted,
-    textAlign: 'center',
-  },
-  tabLabelFocused: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: LibraryColors.accent,
-    textAlign: 'center',
-  },
-  pressed: { opacity: 0.75 },
-});

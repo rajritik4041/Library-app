@@ -7,18 +7,78 @@ import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { useBooksApi } from '@/context/books-api-context';
 import { getDepartmentLabel } from '@/constants/departments';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useLibraryColors } from '@/hooks/use-library-colors';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 export default function DepartmentsScreen() {
   const router = useRouter();
   const { departments, booksByDepartment, stats, racks, loading, error, apiOnline, refresh } =
     useBooksApi();
+  const colors = useLibraryColors();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      centered: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: Spacing.three,
+      },
+      loadingText: { color: c.inkMuted, fontSize: 15 },
+      banner: {
+        backgroundColor: '#fef3c7',
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        marginBottom: Spacing.two,
+      },
+      bannerText: { color: '#92400e', fontWeight: '600', fontSize: 13 },
+      grid: { gap: Spacing.three },
+      card: {
+        backgroundColor: c.card,
+        borderRadius: Radius.lg,
+        padding: Spacing.four,
+        borderWidth: 1,
+        borderColor: c.border,
+        gap: Spacing.two,
+      },
+      cardPressed: { borderColor: c.accent },
+      cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+      codeBadge: {
+        backgroundColor: c.navy,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: 6,
+        borderRadius: Radius.sm,
+      },
+      codeText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+      count: { fontSize: 13, color: c.inkMuted, fontWeight: '600' },
+      cardTitle: { fontSize: 18, fontWeight: '700', color: c.ink, lineHeight: 24 },
+      cardMeta: { fontSize: 14, color: c.inkMuted },
+      cardLink: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: c.accent,
+        marginTop: Spacing.one,
+      },
+      empty: { textAlign: 'center', color: c.inkMuted, padding: Spacing.four },
+      summary: {
+        gap: Spacing.two,
+        backgroundColor: c.goldMuted,
+        padding: Spacing.four,
+        borderRadius: Radius.lg,
+        marginBottom: Spacing.four,
+        borderWidth: 1,
+        borderColor: c.goldLight,
+      },
+      summaryTitle: { fontSize: 16, fontWeight: '800', color: c.ink },
+      summaryText: { fontSize: 14, lineHeight: 22 },
+    }),
+  );
 
   if (loading && departments.length === 0) {
     return (
       <ScreenShell scroll={false}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={LibraryColors.accent} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <ThemedText style={styles.loadingText}>Departments MongoDB se load…</ThemedText>
         </View>
       </ScreenShell>
@@ -84,59 +144,3 @@ export default function DepartmentsScreen() {
     </ScreenShell>
   );
 }
-
-const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.three,
-  },
-  loadingText: { color: LibraryColors.muted, fontSize: 15 },
-  banner: {
-    backgroundColor: '#fef3c7',
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    marginBottom: Spacing.two,
-  },
-  bannerText: { color: '#92400e', fontWeight: '600', fontSize: 13 },
-  grid: { gap: Spacing.three },
-  card: {
-    backgroundColor: LibraryColors.card,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    gap: Spacing.two,
-  },
-  cardPressed: { borderColor: LibraryColors.accent },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  codeBadge: {
-    backgroundColor: LibraryColors.navy,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 6,
-    borderRadius: Radius.sm,
-  },
-  codeText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  count: { fontSize: 13, color: LibraryColors.muted, fontWeight: '600' },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: LibraryColors.navy, lineHeight: 24 },
-  cardMeta: { fontSize: 14, color: LibraryColors.muted },
-  cardLink: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: LibraryColors.accent,
-    marginTop: Spacing.one,
-  },
-  empty: { textAlign: 'center', color: LibraryColors.muted, padding: Spacing.four },
-  summary: {
-    gap: Spacing.two,
-    backgroundColor: LibraryColors.goldMuted,
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
-    marginBottom: Spacing.four,
-    borderWidth: 1,
-    borderColor: LibraryColors.goldLight,
-  },
-  summaryTitle: { fontSize: 16, fontWeight: '800', color: LibraryColors.navy },
-  summaryText: { fontSize: 14, lineHeight: 22 },
-});

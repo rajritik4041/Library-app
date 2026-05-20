@@ -5,7 +5,8 @@ import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from '
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 import type { ApiIssue } from '@/types/api';
 
@@ -14,6 +15,86 @@ export default function IssuedScreen() {
   const router = useRouter();
   const [issues, setIssues] = useState<ApiIssue[]>([]);
   const [loading, setLoading] = useState(true);
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      scroll: { flex: 1, backgroundColor: c.surface },
+      content: {
+        padding: Spacing.four,
+        gap: Spacing.three,
+        maxWidth: 800,
+        width: '100%',
+        alignSelf: 'center',
+        paddingBottom: 100,
+      },
+      centered: {
+        flexGrow: 1,
+        padding: Spacing.four,
+        justifyContent: 'center',
+        gap: Spacing.three,
+        maxWidth: 480,
+        alignSelf: 'center',
+      },
+      title: { fontSize: 24, fontWeight: '800', color: c.ink },
+      sub: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
+      btn: {
+        backgroundColor: c.navy,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+      },
+      btnOutline: {
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: c.navy,
+      },
+      btnText: { color: '#fff', fontWeight: '800' },
+      btnOutlineText: { color: c.ink, fontWeight: '800' },
+      link: {
+        color: c.accent,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: Spacing.two,
+      },
+      profileCard: {
+        backgroundColor: c.accentSoft,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        gap: 4,
+      },
+      profileBtn: { marginVertical: Spacing.one },
+      profileBtnText: { color: c.accent, fontWeight: '700', fontSize: 14 },
+      profileLine: { fontSize: 14, color: c.ink },
+      profileLabel: { fontWeight: '800', color: c.accent },
+      card: {
+        backgroundColor: c.card,
+        padding: Spacing.four,
+        borderRadius: Radius.lg,
+        gap: Spacing.two,
+        borderWidth: 1,
+        borderColor: c.border,
+      },
+      bookTitle: { fontSize: 17, fontWeight: '700', color: c.ink },
+      row: { fontSize: 15, color: c.ink },
+      label: { fontWeight: '800', color: c.accent },
+      meta: { fontSize: 13, color: c.inkMuted },
+      studentNote: {
+        fontSize: 13,
+        color: c.success,
+        fontWeight: '600',
+        marginTop: Spacing.one,
+      },
+      returnBtn: {
+        marginTop: Spacing.two,
+        backgroundColor: c.success,
+        padding: Spacing.two,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+      },
+      returnText: { color: '#fff', fontWeight: '800' },
+      logout: { alignItems: 'center', padding: Spacing.three, marginTop: Spacing.two },
+      logoutText: { color: c.inkMuted, fontWeight: '600' },
+    }),
+  );
 
   const load = useCallback(async () => {
     if (!token) {
@@ -158,82 +239,3 @@ export default function IssuedScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: LibraryColors.surface },
-  content: {
-    padding: Spacing.four,
-    gap: Spacing.three,
-    maxWidth: 800,
-    width: '100%',
-    alignSelf: 'center',
-    paddingBottom: 100,
-  },
-  centered: {
-    flexGrow: 1,
-    padding: Spacing.four,
-    justifyContent: 'center',
-    gap: Spacing.three,
-    maxWidth: 480,
-    alignSelf: 'center',
-  },
-  title: { fontSize: 24, fontWeight: '800', color: LibraryColors.navy },
-  sub: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
-  btn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-  },
-  btnOutline: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: LibraryColors.navy,
-  },
-  btnText: { color: '#fff', fontWeight: '800' },
-  btnOutlineText: { color: LibraryColors.navy, fontWeight: '800' },
-  link: {
-    color: LibraryColors.accent,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: Spacing.two,
-  },
-  profileCard: {
-    backgroundColor: LibraryColors.accentSoft,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    gap: 4,
-  },
-  profileBtn: { marginVertical: Spacing.one },
-  profileBtnText: { color: LibraryColors.accent, fontWeight: '700', fontSize: 14 },
-  profileLine: { fontSize: 14, color: LibraryColors.navy },
-  profileLabel: { fontWeight: '800', color: LibraryColors.accent },
-  card: {
-    backgroundColor: LibraryColors.card,
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
-    gap: Spacing.two,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-  },
-  bookTitle: { fontSize: 17, fontWeight: '700', color: LibraryColors.navy },
-  row: { fontSize: 15, color: LibraryColors.navy },
-  label: { fontWeight: '800', color: LibraryColors.accent },
-  meta: { fontSize: 13, color: LibraryColors.muted },
-  studentNote: {
-    fontSize: 13,
-    color: LibraryColors.success,
-    fontWeight: '600',
-    marginTop: Spacing.one,
-  },
-  returnBtn: {
-    marginTop: Spacing.two,
-    backgroundColor: LibraryColors.success,
-    padding: Spacing.two,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-  },
-  returnText: { color: '#fff', fontWeight: '800' },
-  logout: { alignItems: 'center', padding: Spacing.three, marginTop: Spacing.two },
-  logoutText: { color: LibraryColors.muted, fontWeight: '600' },
-});

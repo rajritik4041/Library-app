@@ -8,7 +8,9 @@ import { PageHeader } from '@/components/library/page-header';
 import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useLibraryColors } from '@/hooks/use-library-colors';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 const HIGHLIGHTS = [
   { emoji: '🏛️', title: 'Government College', desc: 'Constituent college under ANDUAT, Ayodhya' },
@@ -20,6 +22,132 @@ const HIGHLIGHTS = [
 export default function CollegeHomeScreen() {
   const router = useRouter();
   const { isTeacher, isStudent, teacher, student } = useAuth();
+  const colors = useLibraryColors();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      page: { flex: 1, backgroundColor: c.surface },
+      hero: {
+        borderRadius: Radius.xl,
+        padding: Spacing.five,
+        gap: Spacing.two,
+        marginBottom: Spacing.four,
+      },
+      heroBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: c.gold,
+        color: c.navy,
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.4,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: 6,
+        borderRadius: Radius.pill,
+        overflow: 'hidden',
+      },
+      heroTitle: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#fff',
+        lineHeight: 28,
+      },
+      heroShort: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: c.goldLight,
+      },
+      heroPin: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.75)',
+        marginTop: Spacing.one,
+      },
+      aboutCard: {
+        backgroundColor: c.card,
+        borderRadius: Radius.lg,
+        padding: Spacing.four,
+        borderWidth: 1,
+        borderColor: c.border,
+        marginBottom: Spacing.four,
+        gap: Spacing.two,
+      },
+      paragraph: {
+        fontSize: 14,
+        lineHeight: 22,
+        color: c.ink,
+      },
+      grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing.three,
+        marginBottom: Spacing.four,
+      },
+      highlightCard: {
+        width: '47%',
+        flexGrow: 1,
+        backgroundColor: c.card,
+        borderRadius: Radius.lg,
+        padding: Spacing.three,
+        borderWidth: 1,
+        borderColor: c.border,
+        gap: 4,
+      },
+      highlightEmoji: { fontSize: 24 },
+      highlightTitle: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: c.ink,
+      },
+      highlightDesc: {
+        fontSize: 12,
+        color: c.inkMuted,
+        lineHeight: 16,
+      },
+      contactCard: {
+        backgroundColor: c.goldMuted,
+        borderRadius: Radius.lg,
+        padding: Spacing.four,
+        borderWidth: 1,
+        borderColor: c.goldLight,
+        gap: Spacing.two,
+        marginBottom: Spacing.four,
+      },
+      contactTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: c.ink,
+      },
+      contactLine: {
+        fontSize: 14,
+        color: c.ink,
+        lineHeight: 20,
+      },
+      contactLink: {
+        fontSize: 14,
+        color: c.accent,
+        fontWeight: '600',
+      },
+      libraryBtn: {
+        backgroundColor: c.navy,
+        padding: Spacing.four,
+        borderRadius: Radius.lg,
+        alignItems: 'center',
+      },
+      libraryBtnText: {
+        color: '#fff',
+        fontWeight: '800',
+        fontSize: 16,
+      },
+      secondaryBtn: {
+        marginTop: Spacing.three,
+        alignItems: 'center',
+        padding: Spacing.two,
+      },
+      secondaryBtnText: {
+        color: c.accent,
+        fontWeight: '600',
+        fontSize: 14,
+      },
+    }),
+  );
 
   const openLibrary = () => {
     if (isTeacher) {
@@ -38,7 +166,7 @@ export default function CollegeHomeScreen() {
       <CollegeNavbar active="home" />
       <ScreenShell>
       <LinearGradient
-        colors={[LibraryColors.navy, LibraryColors.navyMid, LibraryColors.navyLight]}
+        colors={[colors.navy, colors.navyMid, colors.navyLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}>
@@ -117,128 +245,3 @@ export default function CollegeHomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: LibraryColors.surface },
-
-  hero: {
-    borderRadius: Radius.xl,
-    padding: Spacing.five,
-    gap: Spacing.two,
-    marginBottom: Spacing.four,
-  },
-  heroBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: LibraryColors.gold,
-    color: LibraryColors.navy,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-    overflow: 'hidden',
-  },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
-    lineHeight: 28,
-  },
-  heroShort: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: LibraryColors.goldLight,
-  },
-  heroPin: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-    marginTop: Spacing.one,
-  },
-  aboutCard: {
-    backgroundColor: LibraryColors.card,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    marginBottom: Spacing.four,
-    gap: Spacing.two,
-  },
-  paragraph: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#000000',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.three,
-    marginBottom: Spacing.four,
-  },
-  highlightCard: {
-    width: '47%',
-    flexGrow: 1,
-    backgroundColor: LibraryColors.card,
-    borderRadius: Radius.lg,
-    padding: Spacing.three,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    gap: 4,
-  },
-  highlightEmoji: { fontSize: 24 },
-  highlightTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: LibraryColors.navy,
-  },
-  highlightDesc: {
-    fontSize: 12,
-    color: LibraryColors.muted,
-    lineHeight: 16,
-  },
-  contactCard: {
-    backgroundColor: LibraryColors.goldMuted,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    borderWidth: 1,
-    borderColor: LibraryColors.goldLight,
-    gap: Spacing.two,
-    marginBottom: Spacing.four,
-  },
-  contactTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: LibraryColors.navy,
-  },
-  contactLine: {
-    fontSize: 14,
-    color: LibraryColors.navy,
-    lineHeight: 20,
-  },
-  contactLink: {
-    fontSize: 14,
-    color: LibraryColors.accent,
-    fontWeight: '600',
-  },
-  libraryBtn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-  },
-  libraryBtnText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  secondaryBtn: {
-    marginTop: Spacing.three,
-    alignItems: 'center',
-    padding: Spacing.two,
-  },
-  secondaryBtnText: {
-    color: LibraryColors.accent,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-});

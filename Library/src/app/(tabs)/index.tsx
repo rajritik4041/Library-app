@@ -9,8 +9,9 @@ import { StatCard } from '@/components/library/stat-card';
 import { ThemedText } from '@/components/themed-text';
 import { useBooksApi } from '@/context/books-api-context';
 import { getDepartmentLabel } from '@/constants/departments';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useLibraryColors } from '@/hooks/use-library-colors';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 const QUICK_LINKS = [
   { href: '/books' as const, title: 'Search Books', desc: 'Title, author, publisher', emoji: '📚' },
@@ -31,7 +32,183 @@ export default function HomeScreen() {
     refresh,
   } = useBooksApi();
   const router = useRouter();
-  const theme = useTheme();
+  const colors = useLibraryColors();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      centered: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: Spacing.three,
+        padding: Spacing.five,
+      },
+      loadingText: {
+        color: c.inkMuted,
+        fontSize: 15,
+        textAlign: 'center',
+      },
+      banner: {
+        backgroundColor: '#fef3c7',
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+      },
+      bannerText: {
+        color: '#92400e',
+        fontWeight: '600',
+        fontSize: 13,
+      },
+      hero: {
+        borderRadius: Radius.xl,
+        padding: Spacing.four,
+        gap: Spacing.two,
+        shadowColor: c.navy,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+        elevation: 8,
+      },
+      heroBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: c.gold,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: 6,
+        borderRadius: Radius.pill,
+      },
+      heroBadgeText: {
+        color: c.navy,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+      },
+      heroTitle: {
+        fontSize: 30,
+        fontWeight: '800',
+        color: '#fff',
+        lineHeight: 36,
+      },
+      heroSubtitle: {
+        color: 'rgba(255,255,255,0.9)',
+        fontSize: 15,
+        lineHeight: 22,
+      },
+      heroMeta: {
+        color: 'rgba(255,255,255,0.55)',
+        fontSize: 12,
+        marginTop: Spacing.one,
+      },
+      rackSearchBox: {
+        backgroundColor: c.card,
+        borderRadius: Radius.lg,
+        padding: Spacing.four,
+        borderWidth: 1,
+        borderColor: c.border,
+        gap: Spacing.three,
+        elevation: 3,
+      },
+      rackSearchTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: c.ink,
+      },
+      rackInputRow: {
+        flexDirection: 'row',
+        gap: Spacing.two,
+      },
+      rackInput: {
+        flex: 1,
+        backgroundColor: c.surface,
+        borderRadius: Radius.md,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: 12,
+        fontSize: 16,
+        fontWeight: '600',
+        borderWidth: 1,
+        borderColor: c.border,
+        color: c.inputText,
+        outlineStyle: 'none',
+      } as object,
+      rackBtn: {
+        backgroundColor: c.accent,
+        paddingHorizontal: Spacing.four,
+        borderRadius: Radius.md,
+        justifyContent: 'center',
+      },
+      rackBtnText: {
+        color: '#fff',
+        fontWeight: '800',
+        fontSize: 15,
+      },
+      rackChips: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing.two,
+      },
+      miniRackChip: {
+        backgroundColor: c.accentSoft,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: 8,
+        borderRadius: Radius.pill,
+      },
+      miniRackText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: c.accent,
+      },
+      collegeLink: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
+      collegeLinkText: { color: c.accent, fontWeight: '700', fontSize: 14 },
+      accountBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.three,
+        backgroundColor: c.navy,
+        borderRadius: Radius.lg,
+        padding: Spacing.four,
+      },
+      accountBody: { flex: 1, gap: 2 },
+      accountTitle: { fontSize: 16, fontWeight: '800', color: '#fff' },
+      accountDesc: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+      accountArrow: { fontSize: 20, color: c.gold, fontWeight: '800' },
+      statsRow: { flexDirection: 'row', gap: Spacing.three, flexWrap: 'wrap' },
+      links: { gap: Spacing.three },
+      linkCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.three,
+        backgroundColor: c.card,
+        borderRadius: Radius.lg,
+        padding: Spacing.three,
+        borderWidth: 1,
+        borderColor: c.border,
+        elevation: 2,
+      },
+      linkCardPressed: { borderColor: c.accent },
+      linkIconWrap: {
+        width: 48,
+        height: 48,
+        borderRadius: Radius.md,
+        backgroundColor: c.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      linkEmoji: { fontSize: 24 },
+      linkBody: { flex: 1, gap: 4 },
+      linkTitle: { fontSize: 16, fontWeight: '700', color: c.ink },
+      linkDesc: { fontSize: 13, color: c.inkMuted },
+      linkArrow: { fontSize: 22, color: c.accent, fontWeight: '700' },
+      deptPreview: { gap: Spacing.two, paddingBottom: Spacing.four },
+      sectionTitle: { fontSize: 18, fontWeight: '700', color: c.ink },
+      deptTags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+      deptTag: {
+        backgroundColor: c.goldMuted,
+        paddingHorizontal: Spacing.three,
+        paddingVertical: Spacing.two,
+        borderRadius: Radius.pill,
+        borderWidth: 1,
+        borderColor: c.goldLight,
+      },
+      deptTagText: { fontSize: 12, fontWeight: '700', color: c.ink },
+    }),
+  );
   const [rackQuery, setRackQuery] = useState('');
 
   const searchByRack = () => {
@@ -51,7 +228,7 @@ export default function HomeScreen() {
     return (
       <ScreenShell scroll={false}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={LibraryColors.accent} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <ThemedText style={styles.loadingText}>MongoDB se library load ho rahi hai…</ThemedText>
         </View>
       </ScreenShell>
@@ -67,7 +244,7 @@ export default function HomeScreen() {
       ) : null}
 
       <LinearGradient
-        colors={[LibraryColors.navy, LibraryColors.navyMid, LibraryColors.navyLight]}
+        colors={[colors.navy, colors.navyMid, colors.navyLight]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}>
@@ -90,8 +267,8 @@ export default function HomeScreen() {
             value={rackQuery}
             onChangeText={setRackQuery}
             placeholder="Enter rack no. e.g. 12.2"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.rackInput, { color: theme.text }]}
+            placeholderTextColor={colors.inputPlaceholder}
+            style={styles.rackInput}
             keyboardType="decimal-pad"
             onSubmitEditing={searchByRack}
           />
@@ -174,177 +351,3 @@ export default function HomeScreen() {
     </ScreenShell>
   );
 }
-
-const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.three,
-    padding: Spacing.five,
-  },
-  loadingText: {
-    color: LibraryColors.muted,
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  banner: {
-    backgroundColor: '#fef3c7',
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-  },
-  bannerText: {
-    color: '#92400e',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  hero: {
-    borderRadius: Radius.xl,
-    padding: Spacing.four,
-    gap: Spacing.two,
-    shadowColor: LibraryColors.navy,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  heroBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: LibraryColors.gold,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-  },
-  heroBadgeText: {
-    color: LibraryColors.navy,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  heroTitle: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#fff',
-    lineHeight: 36,
-  },
-  heroSubtitle: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  heroMeta: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
-    marginTop: Spacing.one,
-  },
-  rackSearchBox: {
-    backgroundColor: LibraryColors.card,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    gap: Spacing.three,
-    elevation: 3,
-  },
-  rackSearchTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: LibraryColors.navy,
-  },
-  rackInputRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  rackInput: {
-    flex: 1,
-    backgroundColor: LibraryColors.surface,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 12,
-    fontSize: 16,
-    fontWeight: '600',
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    outlineStyle: 'none',
-  } as object,
-  rackBtn: {
-    backgroundColor: LibraryColors.accent,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Radius.md,
-    justifyContent: 'center',
-  },
-  rackBtnText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 15,
-  },
-  rackChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
-  miniRackChip: {
-    backgroundColor: LibraryColors.accentSoft,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 8,
-    borderRadius: Radius.pill,
-  },
-  miniRackText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: LibraryColors.accent,
-  },
-  collegeLink: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
-  collegeLinkText: { color: LibraryColors.accent, fontWeight: '700', fontSize: 14 },
-  accountBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    backgroundColor: LibraryColors.navy,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-  },
-  accountBody: { flex: 1, gap: 2 },
-  accountTitle: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  accountDesc: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
-  accountArrow: { fontSize: 20, color: LibraryColors.gold, fontWeight: '800' },
-  statsRow: { flexDirection: 'row', gap: Spacing.three, flexWrap: 'wrap' },
-  links: { gap: Spacing.three },
-  linkCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    backgroundColor: LibraryColors.card,
-    borderRadius: Radius.lg,
-    padding: Spacing.three,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    elevation: 2,
-  },
-  linkCardPressed: { borderColor: LibraryColors.accent },
-  linkIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.md,
-    backgroundColor: LibraryColors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  linkEmoji: { fontSize: 24 },
-  linkBody: { flex: 1, gap: 4 },
-  linkTitle: { fontSize: 16, fontWeight: '700', color: LibraryColors.navy },
-  linkDesc: { fontSize: 13, color: LibraryColors.muted },
-  linkArrow: { fontSize: 22, color: LibraryColors.accent, fontWeight: '700' },
-  deptPreview: { gap: Spacing.two, paddingBottom: Spacing.four },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: LibraryColors.navy },
-  deptTags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  deptTag: {
-    backgroundColor: LibraryColors.goldMuted,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: LibraryColors.goldLight,
-  },
-  deptTagText: { fontSize: 12, fontWeight: '700', color: LibraryColors.navy },
-});

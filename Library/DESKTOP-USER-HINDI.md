@@ -1,8 +1,22 @@
 # EJ MCAET Library — Desktop App (Windows)
 
+## Download
+
+| Platform | File | Kaise milega |
+|----------|------|----------------|
+| **Windows** | `EJ MCAET Library Setup 1.0.0.exe` | `Library/release/` folder (build ke baad) |
+| **macOS** | `EJ MCAET Library-x.x.x.dmg` | GitHub → Actions → **Build Desktop App** → **EJ-MCAET-Library-macOS** artifact |
+
+Windows par Mac `.dmg` build nahi hota — Mac ke liye GitHub Actions se download karein (neeche).
+
 ## Install (kisi bhi user ke liye)
 
+### Windows
 1. **`EJ MCAET Library Setup 1.0.0.exe`** file par double-click karein.
+
+### macOS
+1. `.dmg` file open karein → app ko **Applications** folder mein drag karein.
+2. Pehli baar: System Settings → Privacy → "Open Anyway" (agar blocked ho).
 2. Install location choose karein → Install.
 3. Desktop ya Start Menu se **EJ MCAET Library** open karein.
 
@@ -37,11 +51,23 @@ Students ka login teacher banata hai (User ID + password).
 | Books nahi dikhte | Internet + dubara Books tab |
 | Purana version | Naya installer dubara install karein |
 
-## Developer — naya .exe banana
+## Developer — naya installer banana
 
+**Windows (.exe):**
 ```bat
 cd Library
 build-desktop.bat
 ```
 
-Output: `Library\release\EJ MCAET Library Setup x.x.x.exe`
+**macOS (.dmg)** — Mac machine par:
+```bash
+cd Library
+npm run desktop:pack
+```
+
+**Ya GitHub se (Windows se bhi):**
+1. Code GitHub par push karein
+2. **Actions** tab → **Build Desktop App** → **Run workflow**
+3. Complete hone par **EJ-MCAET-Library-macOS** artifact se `.dmg` download karein
+
+Output: `Library/release/`

@@ -5,8 +5,9 @@ import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
-import { FormColors, FormStyles } from '@/constants/form-styles';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useFormStyles } from '@/hooks/use-form-styles';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 import { confirmAsync } from '@/lib/confirm';
 
@@ -16,6 +17,34 @@ export default function EditStudentScreen() {
   const lookupKey = (Array.isArray(params.key) ? params.key[0] : params.key)?.trim() || '';
   const { token, isTeacher } = useAuth();
   const router = useRouter();
+  const { styles: FormStyles, colors: FormColors } = useFormStyles();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      fieldWrap: { width: '100%' },
+      btn: {
+        backgroundColor: c.navy,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        marginTop: Spacing.two,
+        width: '100%',
+      },
+      btnDanger: {
+        backgroundColor: '#b91c1c',
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+        width: '100%',
+      },
+      btnText: { color: '#fff', fontWeight: '800' },
+      back: {
+        color: c.accent,
+        fontWeight: '600',
+        textAlign: 'center',
+        width: '100%',
+      },
+    }),
+  );
 
   const [studentIdNo, setStudentIdNo] = useState('');
   const [userId, setUserId] = useState('');
@@ -138,7 +167,7 @@ export default function EditStudentScreen() {
         secureTextEntry={opts?.secure}
         autoCapitalize={opts?.caps ? 'characters' : 'none'}
         keyboardType={opts?.phone ? 'phone-pad' : 'default'}
-        placeholderTextColor={FormColors.placeholder}
+        placeholderTextColor={FormColors.inputPlaceholder}
         style={[FormStyles.input, opts?.editable === false && FormStyles.inputDisabled]}
       />
     </View>
@@ -184,29 +213,3 @@ export default function EditStudentScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  fieldWrap: { width: '100%' },
-  btn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    marginTop: Spacing.two,
-    width: '100%',
-  },
-  btnDanger: {
-    backgroundColor: '#b91c1c',
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    width: '100%',
-  },
-  btnText: { color: '#fff', fontWeight: '800' },
-  back: {
-    color: LibraryColors.accent,
-    fontWeight: '600',
-    textAlign: 'center',
-    width: '100%',
-  },
-});

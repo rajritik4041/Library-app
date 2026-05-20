@@ -9,18 +9,103 @@ import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { useBooksApi } from '@/context/books-api-context';
-import { LibraryColors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { getDepartmentLabel } from '@/constants/departments';
+import { useLibraryColors } from '@/hooks/use-library-colors';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 import type { ApiBook, ApiIssue } from '@/types/api';
-import { useTheme } from '@/hooks/use-theme';
 
 export default function BookDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { isTeacher, token } = useAuth();
   const { refresh, getBookById: getBookFromStore } = useBooksApi();
-  const theme = useTheme();
+  const colors = useLibraryColors();
+  const styles = useThemedStyles((c) =>
+    StyleSheet.create({
+      backLinkText: { color: c.accent, fontWeight: '600', fontSize: 15 },
+      hero: {
+        borderRadius: Radius.xl,
+        padding: Spacing.four,
+        gap: Spacing.two,
+      },
+      heroId: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
+      title: { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 32 },
+      authors: { fontSize: 16, color: 'rgba(255,255,255,0.85)' },
+      detailsCard: {
+        backgroundColor: c.card,
+        borderRadius: Radius.lg,
+        padding: Spacing.four,
+        borderWidth: 1,
+        borderColor: c.border,
+      },
+      sectionTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: c.ink,
+        marginBottom: Spacing.two,
+      },
+      issuesCard: {
+        backgroundColor: '#fff7ed',
+        padding: Spacing.four,
+        borderRadius: Radius.lg,
+        gap: Spacing.two,
+        borderWidth: 1,
+        borderColor: '#fed7aa',
+      },
+      issueRow: {
+        gap: 4,
+        paddingVertical: Spacing.two,
+        borderBottomWidth: 1,
+        borderBottomColor: '#fed7aa',
+      },
+      issueStudent: { fontWeight: '800', color: c.ink, fontSize: 15 },
+      issueMeta: { fontSize: 13, color: c.inkMuted },
+      publicNote: {
+        backgroundColor: c.accentSoft,
+        padding: Spacing.four,
+        borderRadius: Radius.lg,
+      },
+      publicNoteText: { color: c.ink, lineHeight: 22 },
+      issueForm: {
+        backgroundColor: c.card,
+        padding: Spacing.four,
+        borderRadius: Radius.lg,
+        gap: Spacing.two,
+        borderWidth: 1,
+        borderColor: c.border,
+        marginBottom: Spacing.five,
+      },
+      input: {
+        borderWidth: 1,
+        borderColor: c.border,
+        borderRadius: Radius.md,
+        padding: Spacing.three,
+        fontSize: 15,
+        color: c.inputText,
+        backgroundColor: c.inputBg,
+        outlineStyle: 'none',
+      } as object,
+      issueBtn: {
+        backgroundColor: c.navy,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+      },
+      issueBtnText: { color: '#fff', fontWeight: '800' },
+      issueHint: { fontSize: 13, color: c.inkMuted, lineHeight: 20 },
+      issueOk: { fontSize: 14, fontWeight: '700', color: '#15803d' },
+      issueErr: { fontSize: 13, color: '#b91c1c', lineHeight: 20 },
+      loginBtn: {
+        padding: Spacing.three,
+        alignItems: 'center',
+        marginBottom: Spacing.five,
+      },
+      loginBtnText: { color: c.accent, fontWeight: '700' },
+      notFoundTitle: { fontSize: 22, fontWeight: '700', color: c.ink },
+    }),
+  );
 
   const [book, setBook] = useState<ApiBook | null>(null);
   const [activeIssues, setActiveIssues] = useState<ApiIssue[]>([]);
@@ -112,7 +197,7 @@ export default function BookDetailScreen() {
       </Pressable>
 
       <LinearGradient
-        colors={[LibraryColors.navy, LibraryColors.navyMid]}
+        colors={[colors.navy, colors.navyMid]}
         style={styles.hero}>
         <ThemedText style={styles.heroId}>Book #{book.serialNo} · ID {book.id}</ThemedText>
         <ThemedText style={styles.title}>{book.title}</ThemedText>
@@ -175,8 +260,8 @@ export default function BookDetailScreen() {
             }}
             onBlur={lookupStudent}
             autoCapitalize="characters"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { color: theme.text }]}
+            placeholderTextColor={colors.inputPlaceholder}
+            style={styles.input}
           />
           {studentName ? (
             <ThemedText style={styles.issueOk}>✓ {studentName}</ThemedText>
@@ -197,79 +282,3 @@ export default function BookDetailScreen() {
     </ScreenShell>
   );
 }
-
-const styles = StyleSheet.create({
-  backLinkText: { color: LibraryColors.accent, fontWeight: '600', fontSize: 15 },
-  hero: {
-    borderRadius: Radius.xl,
-    padding: Spacing.four,
-    gap: Spacing.two,
-  },
-  heroId: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
-  title: { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 32 },
-  authors: { fontSize: 16, color: 'rgba(255,255,255,0.85)' },
-  detailsCard: {
-    backgroundColor: LibraryColors.card,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: LibraryColors.navy,
-    marginBottom: Spacing.two,
-  },
-  issuesCard: {
-    backgroundColor: '#fff7ed',
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
-    gap: Spacing.two,
-    borderWidth: 1,
-    borderColor: '#fed7aa',
-  },
-  issueRow: { gap: 4, paddingVertical: Spacing.two, borderBottomWidth: 1, borderBottomColor: '#fed7aa' },
-  issueStudent: { fontWeight: '800', color: LibraryColors.navy, fontSize: 15 },
-  issueMeta: { fontSize: 13, color: LibraryColors.muted },
-  publicNote: {
-    backgroundColor: LibraryColors.accentSoft,
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
-  },
-  publicNoteText: { color: LibraryColors.navy, lineHeight: 22 },
-  issueForm: {
-    backgroundColor: LibraryColors.card,
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
-    gap: Spacing.two,
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    marginBottom: Spacing.five,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: LibraryColors.border,
-    borderRadius: Radius.md,
-    padding: Spacing.three,
-    fontSize: 15,
-    outlineStyle: 'none',
-  } as object,
-  issueBtn: {
-    backgroundColor: LibraryColors.navy,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-  },
-  issueBtnText: { color: '#fff', fontWeight: '800' },
-  issueHint: { fontSize: 13, color: LibraryColors.muted, lineHeight: 20 },
-  issueOk: { fontSize: 14, fontWeight: '700', color: '#15803d' },
-  issueErr: { fontSize: 13, color: '#b91c1c', lineHeight: 20 },
-  loginBtn: {
-    padding: Spacing.three,
-    alignItems: 'center',
-    marginBottom: Spacing.five,
-  },
-  loginBtnText: { color: LibraryColors.accent, fontWeight: '700' },
-  notFoundTitle: { fontSize: 22, fontWeight: '700', color: LibraryColors.navy },
-});

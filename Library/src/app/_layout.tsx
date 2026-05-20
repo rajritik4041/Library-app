@@ -5,20 +5,19 @@ import { useColorScheme } from 'react-native';
 
 import { AuthProvider } from '@/context/auth-context';
 import { BooksApiProvider } from '@/context/books-api-context';
-import { LibraryColors } from '@/constants/theme';
+import { useLibraryColors } from '@/hooks/use-library-colors';
 
-export default function RootLayout() {
+function RootStack() {
   const colorScheme = useColorScheme();
+  const palette = useLibraryColors();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <BooksApiProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: LibraryColors.surface },
-              }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: palette.surface },
+        }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="welcome" />
               <Stack.Screen name="(tabs)" />
@@ -33,9 +32,17 @@ export default function RootLayout() {
                 name="book/[id]"
                 options={{ presentation: 'card', animation: 'slide_from_right' }}
               />
-            </Stack>
-        </BooksApiProvider>
-      </AuthProvider>
+      </Stack>
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <BooksApiProvider>
+        <RootStack />
+      </BooksApiProvider>
+    </AuthProvider>
   );
 }
