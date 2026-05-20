@@ -14,6 +14,7 @@
   "npmRebuild": false,
   "nodeGypRebuild": false,
   "electronVersion": "35.7.5",
+  "afterPack": "../scripts/electron-builder-after-pack.js",
   "extraMetadata": {
     "main": "electron/main.js"
   },
@@ -31,7 +32,10 @@
   },
   "mac": {
     "target": ["dmg"],
-    "icon": "icon.png"
+    "icon": "icon.png",
+    "identity": null,
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false
   },
   "linux": {
     "target": ["AppImage"],

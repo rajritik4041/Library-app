@@ -3,7 +3,7 @@ const path = require('path');
 
 const desktopDir = path.join(__dirname, '..', 'desktop-app');
 
-execSync('npx electron-builder --win nsis --config electron-builder.json', {
+execSync('npx electron-builder --linux AppImage --config electron-builder.json', {
   cwd: desktopDir,
   stdio: 'inherit',
   env: {
