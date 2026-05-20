@@ -20,6 +20,7 @@ import { useFormStyles } from '@/hooks/use-form-styles';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 import { resolveBookCatalogId } from '@/lib/book-id';
+import { MAX_STUDENT_ACTIVE_ISSUES, validateStudentCanIssue } from '@/lib/issue-limits';
 import { confirmAsync } from '@/lib/confirm';
 import type { ApiStudent } from '@/types/api';
 
@@ -99,11 +100,20 @@ export default function TeacherScreen() {
       btnText: { color: '#fff', fontWeight: '800' },
       logout: { alignItems: 'center', padding: Spacing.three, width: '100%' },
       logoutText: { color: c.inkMuted, fontWeight: '600' },
+      syncBanner: {
+        backgroundColor: '#fef3c7',
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: '#fcd34d',
+      },
+      syncBannerText: { color: '#92400e', fontSize: 13, fontWeight: '600', lineHeight: 20 },
     }),
   );
 
   const [title, setTitle] = useState('');
   const [authors, setAuthors] = useState('');
+  const [publisher, setPublisher] = useState('');
   const [subject, setSubject] = useState('');
   const [rackNo, setRackNo] = useState('');
   const [copies, setCopies] = useState('1');
@@ -118,6 +128,7 @@ export default function TeacherScreen() {
   const [students, setStudents] = useState<ApiStudent[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [studentSearch, setStudentSearch] = useState('');
+  const [syncBanner, setSyncBanner] = useState<string | null>(null);
 
   const loadStudents = useCallback(
     async (search?: string) => {
@@ -138,6 +149,28 @@ export default function TeacherScreen() {
   useEffect(() => {
     if (isTeacher && token) loadStudents();
   }, [isTeacher, token, loadStudents]);
+
+  useEffect(() => {
+    if (!isTeacher) return;
+    void api.health().then((h) => {
+      const s = h.sync;
+      if (!s) return;
+      if (s.sheetWriteOk === false) {
+        const email =
+          (s as { serviceAccountEmail?: string }).serviceAccountEmail ||
+          'sheets@sheet-manage-496912.iam.gserviceaccount.com';
+        setSyncBanner(
+          `Excel sync BLOCKED: App se add/edit Excel tak nahi jayega. Google Sheet → Share → ${email} ko Editor banaein (Viewer se kaam nahi hota). Excel se MongoDB abhi chal sakta hai.`,
+        );
+      } else if (!s.inSync) {
+        setSyncBanner(
+          `Excel/Mongo alag hai (Sheet ${s.sheetCount}, DB ${s.mongoCount}). Auto-sync chal rahi hai…`,
+        );
+      } else {
+        setSyncBanner(null);
+      }
+    });
+  }, [isTeacher]);
 
   const openEdit = (s: ApiStudent) => {
     const key = (s.userId || s.studentUserId || '').trim();
@@ -216,9 +249,10 @@ export default function TeacherScreen() {
       return;
     }
     try {
-      await api.addBook(token, {
+      const res = await api.addBook(token, {
         title: title.trim(),
         authors: authors.trim(),
+        publisher: publisher.trim(),
         subject: subject.trim(),
         rackNo,
         department,
@@ -226,9 +260,15 @@ export default function TeacherScreen() {
       });
       setTitle('');
       setAuthors('');
+      setPublisher('');
       setSubject('');
       await refresh();
-      Alert.alert('Success', 'Book added');
+      Alert.alert(
+        res.sheetWarning ? 'Added (Excel sync pending)' : 'Success',
+        res.sheetWarning
+          ? `MongoDB mein save ho gaya.\n\n${res.sheetWarning}`
+          : 'Book added — MongoDB & Excel synced',
+      );
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Failed');
     }
@@ -252,6 +292,12 @@ export default function TeacherScreen() {
         setIssueStudentName(student.name);
       }
       await api.getBook(catalogId);
+      const { issues: activeIssues } = await api.getActiveIssues(token);
+      const limitErr = validateStudentCanIssue(activeIssues, student.studentId, catalogId);
+      if (limitErr) {
+        Alert.alert('Issue not allowed', limitErr);
+        return;
+      }
       await api.issueBook(token, {
         bookId: catalogId,
         studentId: student.studentId,
@@ -282,10 +328,13 @@ export default function TeacherScreen() {
         { confirmLabel: 'Delete', destructive: true },
       );
       if (!ok) return;
-      await api.deleteBook(token, catalogId);
+      const del = await api.deleteBook(token, catalogId);
       await refresh();
       setDeleteBookId('');
-      Alert.alert('Deleted', 'Book removed');
+      Alert.alert(
+        del.sheetWarning ? 'Deleted (Excel pending)' : 'Deleted',
+        del.sheetWarning || 'Book removed from MongoDB & Excel',
+      );
     } catch (e) {
       Alert.alert('Delete failed', e instanceof Error ? e.message : 'Could not delete book');
     }
@@ -305,6 +354,12 @@ export default function TeacherScreen() {
         title={`Welcome, ${teacher?.name}`}
         subtitle={`ID: ${teacher?.teacherId}`}
       />
+
+      {syncBanner ? (
+        <View style={styles.syncBanner}>
+          <ThemedText style={styles.syncBannerText}>⚠ {syncBanner}</ThemedText>
+        </View>
+      ) : null}
 
       <Pressable style={styles.historyBtn} onPress={() => router.push('/(tabs)/history')}>
         <ThemedText style={styles.historyBtnText}>📋 View Book History (issue & return)</ThemedText>
@@ -366,6 +421,8 @@ export default function TeacherScreen() {
         <TextInput placeholder="Title" value={title} onChangeText={setTitle} {...inputProps} />
         <ThemedText style={FormStyles.label}>Author name *</ThemedText>
         <TextInput placeholder="Authors" value={authors} onChangeText={setAuthors} {...inputProps} />
+        <ThemedText style={FormStyles.label}>Publisher</ThemedText>
+        <TextInput placeholder="Publisher name" value={publisher} onChangeText={setPublisher} {...inputProps} />
         <ThemedText style={FormStyles.label}>Subject name *</ThemedText>
         <TextInput placeholder="Subject" value={subject} onChangeText={setSubject} {...inputProps} />
         <TextInput placeholder="Rack no." value={rackNo} onChangeText={setRackNo} {...inputProps} />
@@ -397,7 +454,8 @@ export default function TeacherScreen() {
           {...inputProps}
         />
         <ThemedText style={FormStyles.hint}>
-          Bina student registration ke issue nahi hogi. ID No likhein (User ID nahi).
+          Bina student registration ke issue nahi hogi. ID No likhein (User ID nahi). Ek student
+          maximum {MAX_STUDENT_ACTIVE_ISSUES} books; ek hi book dobara issue nahi.
         </ThemedText>
         <ThemedText style={FormStyles.label}>Student ID No * (enrollment / roll)</ThemedText>
         <TextInput

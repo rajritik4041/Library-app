@@ -1,7 +1,7 @@
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId: 'com.rajritik.library',
-  productName: 'EJ MCAET Library',
+  productName: 'MCAET Library',
   directories: {
     app: 'desktop-app',
     output: 'release',

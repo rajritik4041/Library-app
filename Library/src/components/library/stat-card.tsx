@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { cardBorder, libraryElevation } from '@/lib/platform-styles';
 
 type StatCardProps = {
   label: string;
@@ -27,15 +28,10 @@ export function StatCard({ label, value, hint, accent = 'navy' }: StatCardProps)
         borderRadius: Radius.lg,
         padding: Spacing.three,
         paddingTop: Spacing.two,
-        borderWidth: 1,
-        borderColor: c.border,
+        ...cardBorder(c.border),
         gap: 4,
         overflow: 'hidden',
-        shadowColor: c.navy,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 3,
+        ...libraryElevation(c.shadow, 'card'),
       },
       accentBar: {
         height: 4,

@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/library/page-header';
 import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { API_URL } from '@/config/api';
+import { COLLEGE, LIBRARY_ABOUT } from '@/constants/college-branding';
 import { useBooksApi } from '@/context/books-api-context';
 import { Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
@@ -103,8 +104,8 @@ export default function AboutScreen() {
     <ScreenShell>
       <PageHeader
         badge={apiOnline ? 'MongoDB' : 'Offline'}
-        title="EJ MCAET Library"
-        subtitle="Engineering college library — live data from MongoDB database."
+        title={COLLEGE.libraryName}
+        subtitle={`${COLLEGE.shortName} — agricultural engineering college library with live catalog.`}
       />
 
       <View style={styles.card}>
@@ -131,9 +132,7 @@ export default function AboutScreen() {
       <View style={styles.card}>
         <ThemedText style={styles.cardTitle}>About the Library</ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.paragraph}>
-          The EJ MCAET College Central Library supports undergraduate and postgraduate programs in
-          engineering. Our collection includes core textbooks in FMPE, Mechanical Engineering, CSE,
-          SWCE, and related disciplines — all catalogued digitally for easy access.
+          {LIBRARY_ABOUT}
         </ThemedText>
       </View>
 
@@ -156,10 +155,11 @@ export default function AboutScreen() {
 
       <View style={styles.card}>
         <ThemedText style={styles.cardTitle}>Contact</ThemedText>
-        <DetailRow label="Institution" value="EJ MCAET College" />
-        <DetailRow label="Librarian" value="Contact college administration office" />
-        <DetailRow label="Email" value="library@ejmcaet.edu.in" />
-        <DetailRow label="Phone" value="+91-XXXX-XXXXXX" />
+        <DetailRow label="Institution" value={COLLEGE.fullName} />
+        <DetailRow label="Dean" value={COLLEGE.dean} />
+        <DetailRow label="Email" value={COLLEGE.email} />
+        <DetailRow label="Phone" value={COLLEGE.phone} />
+        <DetailRow label="Website" value={COLLEGE.websiteDisplay} />
       </View>
 
       <View style={styles.card}>
@@ -175,7 +175,7 @@ export default function AboutScreen() {
       </View>
 
       <ThemedText style={styles.footer}>
-        © {new Date().getFullYear()} EJ MCAET College Library · Catalog v1.0
+        © {new Date().getFullYear()} {COLLEGE.shortName} Central Library · {COLLEGE.websiteDisplay}
       </ThemedText>
     </ScreenShell>
   );

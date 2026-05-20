@@ -54,9 +54,20 @@ function envPrivateKey() {
   return raw.replace(/\\n/g, '\n').trim();
 }
 
+/** Accept raw ID or full Google Sheets URL from .env */
+export function parseGoogleSheetId(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  const fromUrl = s.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (fromUrl) return fromUrl[1];
+  const beforeEdit = s.split('/edit')[0].split('?')[0].trim();
+  if (/^[a-zA-Z0-9-_]{20,}$/.test(beforeEdit)) return beforeEdit;
+  return s;
+}
+
 export function isSheetsSyncEnabled() {
   return Boolean(
-    process.env.GOOGLE_SHEET_ID?.trim() &&
+    parseGoogleSheetId(process.env.GOOGLE_SHEET_ID) &&
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() &&
       envPrivateKey(),
   );
@@ -74,7 +85,7 @@ async function getClient() {
   });
   await auth.authorize();
   sheetsApi = google.sheets({ version: 'v4', auth });
-  sheetId = process.env.GOOGLE_SHEET_ID.trim();
+  sheetId = parseGoogleSheetId(process.env.GOOGLE_SHEET_ID);
   return sheetsApi;
 }
 
@@ -599,7 +610,9 @@ export function startSheetSyncLoop(Book, countActiveIssues, intervalMs = 30000) 
 
   const tick = async () => {
     try {
-      await reconcile(Book, countActiveIssues);
+      const { withMongoRetry } = await import('./mongo-connection.js');
+      const uri = process.env.MONGODB_URI;
+      await withMongoRetry(() => reconcile(Book, countActiveIssues), { uri, retries: 2 });
     } catch (e) {
       console.warn('Sheet sync error:', e.message);
     }

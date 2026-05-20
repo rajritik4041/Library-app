@@ -5,12 +5,14 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { cardBorder, libraryElevation, webTypography } from '@/lib/platform-styles';
 
 type SearchBarProps = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
   resultCount?: number;
+  resultUnit?: string;
   rackMatchCount?: number;
   onClear?: () => void;
 };
@@ -20,6 +22,7 @@ export function SearchBar({
   onChangeText,
   placeholder = 'Title, author, publisher, rack no. (e.g. 12.2)...',
   resultCount,
+  resultUnit = 'book',
   rackMatchCount,
   onClear,
 }: SearchBarProps) {
@@ -32,9 +35,9 @@ export function SearchBar({
         alignItems: 'center',
         backgroundColor: c.inputBg,
         borderRadius: Radius.lg,
-        borderWidth: 1.5,
-        borderColor: c.border,
+        ...cardBorder(c.border),
         overflow: 'hidden',
+        ...libraryElevation(c.shadow, 'raised'),
       },
       searchIconWrap: { paddingLeft: Spacing.three, paddingRight: Spacing.one },
       icon: { fontSize: 18 },
@@ -46,6 +49,7 @@ export function SearchBar({
         paddingVertical: Platform.select({ web: 14, default: Spacing.three }),
         paddingRight: Spacing.two,
         outlineStyle: 'none',
+        ...webTypography,
         ...Platform.select({ web: { outlineWidth: 0 } }),
       } as object,
       clearBtn: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
@@ -87,7 +91,8 @@ export function SearchBar({
       {resultCount !== undefined ? (
         <View style={styles.resultRow}>
           <ThemedText style={styles.resultText}>
-            {resultCount} book{resultCount === 1 ? '' : 's'} found
+            {resultCount} {resultUnit}
+            {resultCount === 1 ? '' : 's'} found
           </ThemedText>
           {rackMatchCount !== undefined && rackMatchCount > 0 ? (
             <View style={styles.rackHint}>

@@ -12,6 +12,11 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 import * as fileStore from './file-store.js';
 import * as sheetSync from './google-sheets-sync.js';
+import {
+  assertStudentCanIssueInMongo,
+  httpStatusFromIssueError,
+} from './issue-limits.js';
+import { connectMongo, ensureMongoConnected, withMongoRetry } from './mongo-connection.js';
 
 dotenv.config();
 
@@ -181,6 +186,19 @@ async function getActiveIssueCount(bookId) {
   return Issue.countDocuments({ book: bookId, status: 'issued' });
 }
 
+/** One aggregation instead of N countDocuments (fixes slow /api/books & /api/stats). */
+async function getIssuedCountByBookId() {
+  const rows = await Issue.aggregate([
+    { $match: { status: 'issued' } },
+    { $group: { _id: '$book', count: { $sum: 1 } } },
+  ]);
+  const map = new Map();
+  for (const row of rows) {
+    map.set(String(row._id), row.count);
+  }
+  return map;
+}
+
 function formatSheetWarning(sheetPush) {
   const email =
     sheetPush.serviceAccountEmail ||
@@ -221,21 +239,85 @@ async function findBookByCatalogOrSerial(bookIdInput) {
   if (!book && /^\d+$/.test(raw)) {
     book = await Book.findOne({ serialNo: Number(raw) });
   }
+  if (!book && mongoose.Types.ObjectId.isValid(raw)) {
+    book = await Book.findById(raw);
+  }
   if (!book) return null;
   return { catalogId: book.catalogId, book };
 }
 
-async function enrichBook(book) {
-  const issued = await getActiveIssueCount(book._id);
+let catalogById;
+let catalogBySerial;
+
+function loadCatalogLookup() {
+  if (catalogBySerial) return;
+  catalogById = new Map();
+  catalogBySerial = new Map();
+  const candidates = [
+    path.join(__dirname, '..', 'src', 'data', 'catalog.json'),
+    path.join(__dirname, 'data', 'catalog.json'),
+  ];
+  const catalogPath = candidates.find((p) => fs.existsSync(p));
+  if (!catalogPath) return;
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+  for (const b of catalog.books || []) {
+    catalogById.set(String(b.id), b);
+    catalogBySerial.set(Number(b.serialNo), b);
+  }
+}
+
+function catalogEntry(doc) {
+  loadCatalogLookup();
+  if (!catalogBySerial) return null;
+  return (
+    catalogById.get(String(doc.catalogId)) ||
+    catalogBySerial.get(Number(doc.serialNo)) ||
+    null
+  );
+}
+
+function resolveRackNo(doc) {
+  const direct = String(doc.rackNo ?? '').trim();
+  if (direct) return direct;
+  const hit = catalogEntry(doc);
+  return String(hit?.rackNo ?? '').trim();
+}
+
+function resolvePublisher(doc) {
+  const direct = String(doc.publisher ?? '').trim();
+  if (direct) return direct;
+  const hit = catalogEntry(doc);
+  return String(hit?.publisher ?? '').trim();
+}
+
+function resolveAuthors(doc) {
+  const direct = String(doc.authors ?? '').trim();
+  if (direct) return direct;
+  const hit = catalogEntry(doc);
+  return String(hit?.authors ?? '').trim();
+}
+
+async function verifyTeacherPassword(teacherId, password) {
+  if (!password) return false;
+  if (USE_FILE_MODE) {
+    const row = await fileStore.verifyFileTeacher(teacherId, password, process.env);
+    return Boolean(row);
+  }
+  const teacher = await Teacher.findOne({ teacherId: String(teacherId).toUpperCase() });
+  if (!teacher) return false;
+  return bcrypt.compare(password, teacher.passwordHash);
+}
+
+function formatEnrichedBook(book, issued = 0) {
   const available = Math.max(0, book.copies - issued);
   return {
     id: book.catalogId,
     mongoId: book._id.toString(),
     serialNo: book.serialNo,
-    rackNo: book.rackNo,
+    rackNo: resolveRackNo(book),
     title: book.title,
-    authors: book.authors,
-    publisher: book.publisher,
+    authors: resolveAuthors(book),
+    publisher: resolvePublisher(book),
     department: book.department,
     subject: book.subject,
     copies: book.copies,
@@ -243,6 +325,13 @@ async function enrichBook(book) {
     availableCount: available,
     status: available > 0 ? 'available' : 'issued_out',
   };
+}
+
+async function enrichBook(book, issuedByBookId) {
+  const issued =
+    issuedByBookId?.get(String(book._id)) ??
+    (await getActiveIssueCount(book._id));
+  return formatEnrichedBook(book, issued);
 }
 
 async function seedFromCatalog() {
@@ -648,7 +737,10 @@ app.get('/api/books', async (_req, res) => {
       return res.json({ books, total: books.length });
     }
     const books = await Book.find().sort({ serialNo: 1 });
-    const enriched = await Promise.all(books.map(enrichBook));
+    const issuedByBookId = await getIssuedCountByBookId();
+    const enriched = books.map((b) =>
+      formatEnrichedBook(b, issuedByBookId.get(String(b._id)) || 0),
+    );
     res.json({ books: enriched, total: enriched.length });
   } catch (err) {
     console.error(err);
@@ -856,7 +948,7 @@ app.get('/api/issues/mine', authStudent, async (req, res) => {
           ? {
               id: i.book.catalogId,
               title: i.book.title,
-              rackNo: i.book.rackNo,
+              rackNo: resolveRackNo(i.book),
               department: i.book.department,
             }
           : null,
@@ -882,7 +974,7 @@ function mapIssueHistoryRow(i, bookDoc) {
       ? {
           id: bookDoc.catalogId || bookDoc.id,
           title: bookDoc.title,
-          rackNo: bookDoc.rackNo,
+          rackNo: resolveRackNo(bookDoc),
           department: bookDoc.department,
         }
       : null,
@@ -930,7 +1022,7 @@ app.get('/api/issues/active', authTeacher, async (_req, res) => {
           ? {
               id: i.book.catalogId,
               title: i.book.title,
-              rackNo: i.book.rackNo,
+              rackNo: resolveRackNo(i.book),
               department: i.book.department,
             }
           : null,
@@ -982,10 +1074,7 @@ app.post('/api/issues', authTeacher, async (req, res) => {
         book,
       });
     }
-    const book = await Book.findOne({ catalogId });
-    if (!book) {
-      return res.status(404).json({ error: 'Book not found' });
-    }
+    const book = await assertStudentCanIssueInMongo(Issue, Book, sid, catalogId);
     const issued = await getActiveIssueCount(book._id);
     if (issued >= book.copies) {
       return res.status(400).json({ error: 'No copies available in library' });
@@ -1009,12 +1098,22 @@ app.post('/api/issues', authTeacher, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message || 'Failed to issue book' });
+    res
+      .status(httpStatusFromIssueError(err))
+      .json({ error: err.message || 'Failed to issue book' });
   }
 });
 
 app.post('/api/issues/:issueId/return', authTeacher, async (req, res) => {
   try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: 'Teacher password required to confirm return' });
+    }
+    const passwordOk = await verifyTeacherPassword(req.teacher.teacherId, password);
+    if (!passwordOk) {
+      return res.status(401).json({ error: 'Wrong teacher password' });
+    }
     if (USE_FILE_MODE) {
       const { book } = fileStore.fileReturnIssue(req.params.issueId);
       return res.json({ ok: true, book });
@@ -1041,16 +1140,17 @@ app.get('/api/stats', async (_req, res) => {
     if (USE_FILE_MODE) {
       return res.json(fileStore.fileStats());
     }
-    const totalBooks = await Book.countDocuments();
-    const books = await Book.find();
+    const books = await Book.find().lean();
+    const issuedByBookId = await getIssuedCountByBookId();
     let totalCopies = 0;
     let availableCopies = 0;
     for (const b of books) {
       totalCopies += b.copies;
-      const issued = await getActiveIssueCount(b._id);
+      const issued = issuedByBookId.get(String(b._id)) || 0;
       availableCopies += Math.max(0, b.copies - issued);
     }
-    const activeIssues = await Issue.countDocuments({ status: 'issued' });
+    const activeIssues = [...issuedByBookId.values()].reduce((s, n) => s + n, 0);
+    const totalBooks = books.length;
     res.json({ totalBooks, totalCopies, availableCopies, activeIssues });
   } catch (err) {
     res.status(500).json({ error: 'Stats failed' });
@@ -1158,7 +1258,7 @@ async function start() {
     console.log('FILE mode: Excel → ../src/data/catalog.json | issues → server/data/issues.json');
   } else {
     try {
-      await mongoose.connect(uri, { serverSelectionTimeoutMS: 12000 });
+      await connectMongo(uri);
       USE_FILE_MODE = false;
       console.log('MongoDB connected');
       await seedTeacher();
@@ -1176,7 +1276,10 @@ async function start() {
               writeCheck.error,
             );
           }
-          const result = await sheetSync.reconcile(Book, getActiveIssueCount);
+          const result = await withMongoRetry(
+            () => sheetSync.reconcile(Book, getActiveIssueCount),
+            { uri, retries: 2 },
+          );
           console.log(
             `Initial sync: ${result.direction} | sheet=${result.sheetCount} mongo=${result.mongoCount} inSync=${result.inSync}`,
           );

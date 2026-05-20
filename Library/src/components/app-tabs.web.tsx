@@ -9,7 +9,7 @@ import {
 } from 'expo-router/ui';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type TextStyle, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -17,8 +17,10 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { useAuth } from '@/context/auth-context';
+import { COLLEGE } from '@/constants/college-branding';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { libraryElevation } from '@/lib/platform-styles';
 
 const NAV_ITEMS: { name: string; href: Href; label: string }[] = [
   { name: 'index', href: '/(tabs)', label: 'Home' },
@@ -63,9 +65,7 @@ export default function AppTabs() {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        ...Platform.select({
-          web: { boxShadow: '0 4px 20px rgba(10, 35, 66, 0.15)' },
-        }),
+        ...libraryElevation(c.shadow, 'header'),
       },
       brandBlock: { gap: 2 },
       brandTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
@@ -80,11 +80,12 @@ export default function AppTabs() {
       content: { flex: 1, minHeight: 0 },
       tabSlot: { flex: 1, height: '100%' },
       tabBar: {
-        borderTopWidth: 1,
+        borderTopWidth: 1.5,
         borderTopColor: c.border,
         backgroundColor: c.card,
         paddingTop: Spacing.two,
         paddingHorizontal: Spacing.one,
+        ...libraryElevation(c.shadow, 'raised'),
       },
       tabBarInner: {
         flexDirection: 'row',
@@ -124,8 +125,8 @@ export default function AppTabs() {
       <View style={styles.header}>
         <ThemedView style={styles.headerInner}>
           <View style={styles.brandBlock}>
-            <ThemedText style={styles.brandTitle}>EJ MCAET</ThemedText>
-            <ThemedText style={styles.brandSub}>College Library</ThemedText>
+            <ThemedText style={styles.brandTitle}>{COLLEGE.shortName}</ThemedText>
+            <ThemedText style={styles.brandSub}>{COLLEGE.libraryName}</ThemedText>
           </View>
           <View style={styles.headerActions}>
             <ThemeToggle onDark compact />
@@ -173,14 +174,17 @@ export function TabButton({
   return (
     <Pressable
       {...props}
-      style={({ pressed }) =>
+      style={({ pressed }): ViewStyle =>
         StyleSheet.flatten([
           styles.tabButton,
           isFocused ? styles.tabButtonFocused : undefined,
           pressed ? styles.pressed : undefined,
-        ])
+        ]) as ViewStyle
       }>
-      <ThemedText style={isFocused ? styles.tabLabelFocused : styles.tabLabel}>{children}</ThemedText>
+      <ThemedText
+        style={(isFocused ? styles.tabLabelFocused : styles.tabLabel) as TextStyle}>
+        {children}
+      </ThemedText>
     </Pressable>
   );
 }
@@ -192,8 +196,10 @@ function CustomTabList({
   ...props
 }: TabListProps & { paddingBottom?: number; styles: TabStyles }) {
   return (
-    <View {...props} style={StyleSheet.flatten([styles.tabBar, { paddingBottom }])}>
-      <View style={styles.tabBarInner}>{children}</View>
+    <View
+      {...props}
+      style={StyleSheet.flatten([styles.tabBar, { paddingBottom }]) as ViewStyle}>
+      <View style={styles.tabBarInner as ViewStyle}>{children}</View>
     </View>
   );
 }

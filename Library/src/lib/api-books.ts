@@ -1,3 +1,4 @@
+import { racksForBooks, resolveBookAuthors, resolveBookRackNo } from '@/lib/book-catalog-fields';
 import { matchesRack } from '@/services/catalog-service';
 import type { ApiBook } from '@/types/api';
 
@@ -37,7 +38,8 @@ export function deriveStatsFromBooks(
   for (const b of books) {
     if (b.department) departments.add(b.department);
     if (b.subject) subjects.add(b.subject);
-    if (b.rackNo) racks.add(b.rackNo);
+    const rack = resolveBookRackNo(b);
+    if (rack) racks.add(rack);
     totalCopies += b.copies || 0;
     availableCopies += b.availableCount ?? Math.max(0, (b.copies || 0) - (b.issuedCount || 0));
   }
@@ -62,9 +64,7 @@ export function uniqueSubjects(books: ApiBook[]): string[] {
 }
 
 export function uniqueRacks(books: ApiBook[]): string[] {
-  return [...new Set(books.map((b) => b.rackNo).filter(Boolean))].sort(
-    (a, b) => parseFloat(a) - parseFloat(b) || a.localeCompare(b),
-  );
+  return racksForBooks(books);
 }
 
 export function findApiBookById(books: ApiBook[], id: string): ApiBook | undefined {
@@ -86,20 +86,21 @@ export function filterApiBooks(
   return books.filter((book) => {
     if (department && book.department !== department) return false;
     if (subject && book.subject !== subject) return false;
-    if (rack && !matchesRack(rack, book.rackNo)) return false;
+    if (rack && !matchesRack(rack, resolveBookRackNo(book))) return false;
     if (!q) return true;
+    const bookRack = resolveBookRackNo(book);
+    if (matchesRack(q, bookRack)) return true;
     const haystack = [
       book.title,
-      book.authors,
+      resolveBookAuthors(book),
       book.publisher,
       book.department,
       book.subject,
-      book.rackNo,
       String(book.serialNo),
     ]
       .join(' ')
       .toLowerCase();
-    return haystack.includes(q) || matchesRack(q, book.rackNo);
+    return haystack.includes(q);
   });
 }
 

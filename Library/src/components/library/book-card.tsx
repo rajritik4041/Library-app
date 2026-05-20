@@ -7,6 +7,8 @@ import { ThemedText } from '@/components/themed-text';
 import { getDepartmentLabel } from '@/constants/departments';
 import { Radius, Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { resolveBookAuthors, resolveBookRackNo } from '@/lib/book-catalog-fields';
+import { cardBorder, libraryElevation } from '@/lib/platform-styles';
 import type { ApiBook } from '@/types/api';
 
 type BookCardProps = {
@@ -16,20 +18,17 @@ type BookCardProps = {
 
 export function BookCard({ book, highlightRack }: BookCardProps) {
   const router = useRouter();
+  const rackNo = resolveBookRackNo(book);
+  const authors = resolveBookAuthors(book);
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       card: {
         backgroundColor: c.card,
         borderRadius: Radius.lg,
         padding: Spacing.four,
-        borderWidth: 1,
-        borderColor: c.border,
+        ...cardBorder(c.border),
         gap: Spacing.two,
-        shadowColor: c.navy,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 3,
+        ...libraryElevation(c.shadow, 'card'),
       },
       cardRackMatch: {
         borderColor: c.accent,
@@ -109,7 +108,7 @@ export function BookCard({ book, highlightRack }: BookCardProps) {
               Rack
             </ThemedText>
             <ThemedText style={[styles.rackValue, highlightRack && styles.rackValueHighlight]}>
-              {book.rackNo || '—'}
+              {rackNo || '—'}
             </ThemedText>
           </View>
         </View>
@@ -125,9 +124,9 @@ export function BookCard({ book, highlightRack }: BookCardProps) {
         {book.title}
       </ThemedText>
 
-      {book.authors ? (
-        <ThemedText style={styles.authors} numberOfLines={1}>
-          {book.authors}
+      {authors ? (
+        <ThemedText style={styles.authors} numberOfLines={2}>
+          {authors}
         </ThemedText>
       ) : null}
 

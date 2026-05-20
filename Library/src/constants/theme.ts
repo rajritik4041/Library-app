@@ -12,24 +12,15 @@ export { LibraryColors, getLibraryPalette, libraryPaletteDark, libraryPaletteLig
 export type { LibraryColorScheme } from '@/constants/library-palette';
 
 import { libraryPaletteLight } from '@/constants/library-palette';
+import { libraryElevation } from '@/lib/platform-styles';
 
 const LibraryColors = libraryPaletteLight;
 
+/** Cross-platform shadows — use with themed shadow color when possible. */
 export const Shadows = {
-  card: {
-    shadowColor: LibraryColors.navy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  hero: {
-    shadowColor: LibraryColors.navy,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 8,
-  },
+  card: libraryElevation(LibraryColors.shadow, 'card'),
+  hero: libraryElevation(LibraryColors.shadow, 'hero'),
+  raised: libraryElevation(LibraryColors.shadow, 'raised'),
 } as const;
 
 export const Radius = {

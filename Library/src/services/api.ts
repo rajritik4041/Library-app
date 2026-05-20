@@ -175,8 +175,12 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  returnBook: (token: string, issueId: string) =>
-    request(`/api/issues/${issueId}/return`, { method: 'POST', token }),
+  returnBook: (token: string, issueId: string, password: string) =>
+    request(`/api/issues/${issueId}/return`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ password }),
+    }),
 
   addBook: (
     token: string,

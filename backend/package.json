@@ -10,7 +10,7 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "seed": "node seed.js",
-    "postinstall": "node -e \"const fs=require('fs');const p='data/catalog.json';if(!fs.existsSync(p)){console.warn('WARN: data/catalog.json missing — run npm run sync-backend from repo root');}\""
+    "postinstall": "node -e \"const fs=require('fs');const p='../src/data/catalog.json';if(!fs.existsSync(p)){console.warn('WARN: catalog.json missing — run npm run import-books in Library/');}\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

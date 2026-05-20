@@ -1,5 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/library/book-card';
@@ -13,14 +13,23 @@ import { useBooksApi } from '@/context/books-api-context';
 import { Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { filterApiBooks, matchesRack } from '@/lib/api-books';
+import { resolveBookRackNo } from '@/lib/book-catalog-fields';
 
 export default function BooksScreen() {
   const { department: deptParam, rack: rackParam } = useLocalSearchParams<{
     department?: string;
     rack?: string;
   }>();
-  const { books, apiOnline, error, refresh, loading, subjects, departments: deptList } =
-    useBooksApi();
+  const {
+    books,
+    racks: rackList,
+    apiOnline,
+    error,
+    refresh,
+    loading,
+    subjects,
+    departments: deptList,
+  } = useBooksApi();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       offline: {
@@ -68,9 +77,10 @@ export default function BooksScreen() {
     }
   }, [rackParam]);
 
-  const racks = useMemo(
-    () => [...new Set(books.map((b) => b.rackNo).filter(Boolean))].sort(),
-    [books],
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
   );
 
   const results = useMemo(
@@ -78,7 +88,9 @@ export default function BooksScreen() {
     [books, query, department, subject, rack],
   );
 
-  const rackMatchCount = results.filter((b) => matchesRack(query || rack || '', b.rackNo)).length;
+  const rackMatchCount = results.filter((b) =>
+    matchesRack(query || rack || '', resolveBookRackNo(b)),
+  ).length;
 
   const clearAll = () => {
     setQuery('');
@@ -112,7 +124,7 @@ export default function BooksScreen() {
       <View style={styles.filterBlock}>
         <ThemedText style={styles.filterLabel}>📍 Rack Number</ThemedText>
         <RackFilter
-          racks={racks}
+          racks={rackList}
           selected={rack}
           onSelect={(value) => {
             setRack(value);
@@ -147,7 +159,9 @@ export default function BooksScreen() {
           renderItem={({ item }) => (
             <BookCard
               book={item}
-              highlightRack={Boolean((query || rack) && matchesRack(query || rack || '', item.rackNo))}
+              highlightRack={Boolean(
+                (query || rack) && matchesRack(query || rack || '', resolveBookRackNo(item)),
+              )}
             />
           )}
         />

@@ -55,6 +55,10 @@ export function rackKey(value: string): string {
   return normalizeRack(value).replace(/\./g, '');
 }
 
+/**
+ * Rack search: exact match, or user typing a prefix of the rack (e.g. "12" → "12.2").
+ * Avoids false positives like "123123" matching "12.2" via digit-substring overlap.
+ */
 export function matchesRack(query: string, rackNo: string): boolean {
   const q = normalizeRack(query);
   if (!q) {
@@ -65,13 +69,7 @@ export function matchesRack(query: string, rackNo: string): boolean {
   }
 
   const r = normalizeRack(rackNo);
-  if (r === q || r.includes(q) || q.includes(r)) {
-    return true;
-  }
-
-  const qKey = rackKey(query);
-  const rKey = rackKey(rackNo);
-  return qKey.length > 0 && (rKey === qKey || rKey.includes(qKey) || qKey.includes(rKey));
+  return r === q || r.startsWith(q);
 }
 
 function tokenize(query: string): string[] {

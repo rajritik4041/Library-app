@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
+import { COLLEGE } from '@/constants/college-branding';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
@@ -112,9 +113,9 @@ function TabHeader() {
       <View style={[styles.headerBar, compact && styles.headerBarCompact]}>
         <Pressable onPress={() => router.replace('/')} style={styles.brandBlock}>
           <ThemedText style={[styles.brandTitle, compact && styles.brandTitleCompact]}>
-            EJ MCAET
+            {COLLEGE.shortName}
           </ThemedText>
-          <ThemedText style={styles.brandSub}>College Library</ThemedText>
+          <ThemedText style={styles.brandSub}>{COLLEGE.libraryName}</ThemedText>
         </Pressable>
 
         <View style={styles.headerActions}>

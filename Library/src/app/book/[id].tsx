@@ -15,6 +15,17 @@ import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 import { resolveBookCatalogId } from '@/lib/book-id';
+import {
+  enrichApiBook,
+  resolveBookAuthors,
+  resolveBookPublisher,
+  resolveBookRackNo,
+} from '@/lib/book-catalog-fields';
+import {
+  MAX_STUDENT_ACTIVE_ISSUES,
+  studentAlreadyHasBookOnPage,
+  validateStudentCanIssue,
+} from '@/lib/issue-limits';
 import type { ApiBook, ApiIssue } from '@/types/api';
 
 export default function BookDetailScreen() {
@@ -35,6 +46,7 @@ export default function BookDetailScreen() {
       heroId: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
       title: { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 32 },
       authors: { fontSize: 16, color: 'rgba(255,255,255,0.85)' },
+      publisher: { fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 22 },
       detailsCard: {
         backgroundColor: c.card,
         borderRadius: Radius.lg,
@@ -149,12 +161,12 @@ export default function BookDetailScreen() {
     if (!id) return;
     try {
       const data = await api.getBook(id);
-      setBook(data.book);
+      setBook(enrichApiBook(data.book));
       setActiveIssues(data.activeIssues);
     } catch {
       const cached = getBookFromStore(id);
       if (cached) {
-        setBook(cached);
+        setBook(enrichApiBook(cached));
         setActiveIssues([]);
       } else {
         setBook(null);
@@ -169,11 +181,11 @@ export default function BookDetailScreen() {
   const startEdit = () => {
     if (!book) return;
     setEditTitle(book.title);
-    setEditAuthors(book.authors || '');
-    setEditPublisher(book.publisher || '');
+    setEditAuthors(resolveBookAuthors(book));
+    setEditPublisher(resolveBookPublisher(book));
     setEditDepartment(book.department || '');
     setEditSubject(book.subject || '');
-    setEditRack(book.rackNo || '');
+    setEditRack(resolveBookRackNo(book));
     setEditCopies(String(book.copies));
     setEditing(true);
   };
@@ -195,7 +207,7 @@ export default function BookDetailScreen() {
         rackNo: editRack.trim(),
         copies: Number(editCopies) || book.copies,
       });
-      setBook(updated);
+      setBook(enrichApiBook(updated));
       setEditing(false);
       await refresh();
       Alert.alert(
@@ -238,6 +250,19 @@ export default function BookDetailScreen() {
     }
     try {
       const { student } = await api.lookupStudentByIdNo(token, studentIdNo);
+      if (studentAlreadyHasBookOnPage(activeIssues, student.studentId)) {
+        Alert.alert(
+          'Issue not allowed',
+          'Ye book is student ke paas pehle se issued hai. Ek hi book dobara issue nahi ho sakti.',
+        );
+        return;
+      }
+      const { issues: allActive } = await api.getActiveIssues(token);
+      const limitErr = validateStudentCanIssue(allActive, student.studentId, id);
+      if (limitErr) {
+        Alert.alert('Issue not allowed', limitErr);
+        return;
+      }
       await api.issueBook(token, {
         bookId: id,
         studentId: student.studentId,
@@ -253,6 +278,10 @@ export default function BookDetailScreen() {
       Alert.alert('Issue failed', e instanceof Error ? e.message : 'Could not issue book');
     }
   };
+
+  const publisherText = book ? resolveBookPublisher(book) : '';
+  const authorsText = book ? resolveBookAuthors(book) : '';
+  const rackText = book ? resolveBookRackNo(book) : '';
 
   if (!book) {
     return (
@@ -274,9 +303,17 @@ export default function BookDetailScreen() {
       <LinearGradient
         colors={[colors.navy, colors.navyMid]}
         style={styles.hero}>
-        <ThemedText style={styles.heroId}>Book #{book.serialNo} · ID {book.id}</ThemedText>
+        <ThemedText style={styles.heroId}>
+          Book #{book.serialNo} · ID {book.id}
+          {rackText ? ` · Rack ${rackText}` : ''}
+        </ThemedText>
         <ThemedText style={styles.title}>{book.title}</ThemedText>
-        {book.authors ? <ThemedText style={styles.authors}>by {book.authors}</ThemedText> : null}
+        {authorsText ? (
+          <ThemedText style={styles.authors}>by {authorsText}</ThemedText>
+        ) : null}
+        {publisherText ? (
+          <ThemedText style={styles.publisher}>{publisherText}</ThemedText>
+        ) : null}
         <AvailabilityBadge
           status={book.status}
           availableCount={book.availableCount}
@@ -355,10 +392,12 @@ export default function BookDetailScreen() {
 
       <View style={styles.detailsCard}>
         <ThemedText style={styles.sectionTitle}>Book Information</ThemedText>
-        <DetailRow label="Publisher" value={book.publisher || '—'} />
+        <DetailRow label="Title" value={book.title || '—'} />
+        <DetailRow label="Author(s)" value={authorsText || '—'} />
+        <DetailRow label="Publisher" value={publisherText || '—'} />
         <DetailRow label="Department" value={`${book.department} — ${getDepartmentLabel(book.department)}`} />
         <DetailRow label="Subject" value={`${book.subject} — ${getDepartmentLabel(book.subject)}`} />
-        <DetailRow label="Rack Number" value={book.rackNo} />
+        <DetailRow label="Rack Number" value={rackText || '—'} />
         <DetailRow label="Total Copies" value={String(book.copies)} />
         <DetailRow label="In Library Now" value={String(book.availableCount)} />
         <DetailRow label="Currently Issued" value={String(book.issuedCount)} />
@@ -392,7 +431,8 @@ export default function BookDetailScreen() {
         <View style={styles.issueForm}>
           <ThemedText style={styles.sectionTitle}>Issue to Student</ThemedText>
           <ThemedText style={styles.issueHint}>
-            Sirf registered students — ID No (enrollment) likhein, User ID nahi.
+            Sirf registered students — ID No (enrollment) likhein, User ID nahi. Max{' '}
+            {MAX_STUDENT_ACTIVE_ISSUES} books per student; same book ek baar hi.
           </ThemedText>
           <TextInput
             placeholder="Student ID No *"

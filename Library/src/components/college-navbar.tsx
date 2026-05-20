@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -13,18 +14,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
+import { COLLEGE } from '@/constants/college-branding';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { libraryElevation } from '@/lib/platform-styles';
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' as const, key: 'home' as const },
   { label: 'Library', href: '/welcome' as const, key: 'library' as const },
   { label: 'Books', href: '/(tabs)/books' as const, key: 'books' as const },
   { label: 'About', href: '/(tabs)/about' as const, key: 'about' as const },
-];
+  { label: 'College Site', href: COLLEGE.website, key: 'site' as const, external: true },
+] as const;
 
 type CollegeNavbarProps = {
-  active?: 'home' | 'library' | 'books' | 'about';
+  active?: 'home' | 'library' | 'books' | 'about' | 'site';
 };
 
 export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
@@ -39,6 +43,7 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
         backgroundColor: c.navy,
         paddingHorizontal: Spacing.two,
         paddingBottom: Spacing.two,
+        ...libraryElevation(c.shadow, 'header'),
         ...Platform.select({
           web: { position: 'sticky' as const, top: 0, zIndex: 100 },
         }),
@@ -126,9 +131,9 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
       <View style={[styles.bar, compact && styles.barCompact]}>
         <Pressable onPress={() => router.replace('/')} style={styles.brand}>
           <ThemedText style={[styles.brandTitle, compact && styles.brandTitleCompact]}>
-            MCAET
+            {COLLEGE.shortName}
           </ThemedText>
-          <ThemedText style={styles.brandSub}>Akbarpur</ThemedText>
+          <ThemedText style={styles.brandSub}>{COLLEGE.tagline}</ThemedText>
         </Pressable>
 
         <ScrollView
@@ -141,7 +146,11 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
             return (
               <Pressable
                 key={link.key}
-                onPress={() => router.push(link.href)}
+                onPress={() =>
+                  'external' in link && link.external
+                    ? Linking.openURL(link.href)
+                    : router.push(link.href as '/')
+                }
                 style={[styles.link, isActive && styles.linkActive]}>
                 <ThemedText style={[styles.linkText, isActive && styles.linkTextActive]}>
                   {link.label}

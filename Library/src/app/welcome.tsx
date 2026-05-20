@@ -7,6 +7,7 @@ import { CollegeNavbar } from '@/components/college-navbar';
 import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
+import { COLLEGE } from '@/constants/college-branding';
 import { Radius, Spacing } from '@/constants/theme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
@@ -127,7 +128,7 @@ export default function WelcomeScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}>
-        <ThemedText style={styles.heroBadge}>MCAET Central Library</ThemedText>
+        <ThemedText style={styles.heroBadge}>{COLLEGE.libraryName}</ThemedText>
         <ThemedText style={styles.heroTitle}>Sign in</ThemedText>
         <ThemedText style={styles.heroSubtitle}>
           Choose Student or Teacher to access library services

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -10,11 +10,15 @@ import {
 } from 'react-native';
 
 import { PageHeader } from '@/components/library/page-header';
+import { SearchBar } from '@/components/library/search-bar';
+import { TeacherReturnPasswordModal } from '@/components/library/teacher-return-password-modal';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFormStyles } from '@/hooks/use-form-styles';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { resolveIssueBookRack } from '@/lib/book-catalog-fields';
+import { filterIssuesByQuery } from '@/lib/filter-issues';
 import { api } from '@/services/api';
 import type { ApiIssue } from '@/types/api';
 
@@ -103,7 +107,9 @@ export default function HistoryScreen() {
     }),
   );
   const [issues, setIssues] = useState<ApiIssue[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [returnIssue, setReturnIssue] = useState<ApiIssue | null>(null);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -125,16 +131,22 @@ export default function HistoryScreen() {
     else setLoading(false);
   }, [isTeacher, token, load]);
 
-  const onReturn = async (issueId: string) => {
-    if (!token) return;
+  const onReturnConfirm = async (password: string) => {
+    if (!token || !returnIssue) return;
     try {
-      await api.returnBook(token, issueId);
+      await api.returnBook(token, returnIssue.id, password);
+      setReturnIssue(null);
       await load();
       Alert.alert('Success', 'Book marked as returned');
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Return failed');
     }
   };
+
+  const filteredIssues = useMemo(
+    () => filterIssuesByQuery(issues, searchQuery),
+    [issues, searchQuery],
+  );
 
   if (!isTeacher || !token) {
     return (
@@ -150,8 +162,10 @@ export default function HistoryScreen() {
     );
   }
 
-  const active = issues.filter((i) => i.status === 'issued' || !i.returnedAt);
-  const returned = issues.filter((i) => i.status === 'returned' || i.returnedAt);
+  const active = filteredIssues.filter((i) => i.status === 'issued' || !i.returnedAt);
+  const returned = filteredIssues.filter((i) => i.status === 'returned' || i.returnedAt);
+  const totalActive = issues.filter((i) => i.status === 'issued' || !i.returnedAt).length;
+  const totalReturned = issues.filter((i) => i.status === 'returned' || i.returnedAt).length;
 
   return (
     <ScrollView
@@ -160,8 +174,23 @@ export default function HistoryScreen() {
       <PageHeader
         badge="Teacher"
         title="Book Issue History"
-        subtitle={`${active.length} with students · ${returned.length} returned`}
+        subtitle={
+          searchQuery.trim()
+            ? `${filteredIssues.length} of ${issues.length} records · ${active.length} active · ${returned.length} returned`
+            : `${totalActive} with students · ${totalReturned} returned`
+        }
       />
+
+      {issues.length > 0 ? (
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Student ID No, name, book title, book ID, rack, teacher..."
+          resultCount={searchQuery.trim() ? filteredIssues.length : undefined}
+          resultUnit="record"
+          onClear={() => setSearchQuery('')}
+        />
+      ) : null}
 
       <Pressable style={styles.linkBtn} onPress={() => router.push('/(tabs)/teacher')}>
         <ThemedText style={styles.linkBtnText}>← Back to Teacher page</ThemedText>
@@ -169,8 +198,12 @@ export default function HistoryScreen() {
 
       {issues.length === 0 ? (
         <ThemedText style={FormStyles.hint}>No issue records yet</ThemedText>
+      ) : filteredIssues.length === 0 ? (
+        <ThemedText style={FormStyles.hint}>
+          Koi record nahi mila — Student ID No, book title ya naam se search karein
+        </ThemedText>
       ) : (
-        issues.map((issue) => {
+        filteredIssues.map((issue) => {
           const isActive = issue.status === 'issued' || !issue.returnedAt;
           return (
             <View key={issue.id} style={[styles.card, isActive ? styles.cardActive : styles.cardReturned]}>
@@ -181,7 +214,7 @@ export default function HistoryScreen() {
               </View>
               <ThemedText style={styles.bookTitle}>{issue.book?.title ?? 'Book'}</ThemedText>
               <ThemedText style={FormStyles.metaText}>
-                Book ID: {issue.book?.id} · Rack {issue.book?.rackNo}
+                Book ID: {issue.book?.id} · Rack {resolveIssueBookRack(issue.book) || '—'}
               </ThemedText>
               <ThemedText style={FormStyles.bodyText}>
                 Student: {issue.studentName || '—'} (ID No: {issue.studentId})
@@ -193,7 +226,7 @@ export default function HistoryScreen() {
               {!isActive ? (
                 <ThemedText style={FormStyles.metaText}>Returned: {formatDt(issue.returnedAt)}</ThemedText>
               ) : (
-                <Pressable style={styles.returnBtn} onPress={() => onReturn(issue.id)}>
+                <Pressable style={styles.returnBtn} onPress={() => setReturnIssue(issue)}>
                   <ThemedText style={styles.btnText}>Mark Returned Now</ThemedText>
                 </Pressable>
               )}
@@ -201,6 +234,13 @@ export default function HistoryScreen() {
           );
         })
       )}
+
+      <TeacherReturnPasswordModal
+        visible={Boolean(returnIssue)}
+        bookTitle={returnIssue?.book?.title}
+        onCancel={() => setReturnIssue(null)}
+        onConfirm={onReturnConfirm}
+      />
     </ScrollView>
   );
 }

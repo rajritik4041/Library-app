@@ -3,6 +3,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { assertStudentCanIssueInFile } from './issue-limits.js';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 
@@ -383,6 +384,8 @@ export function filePostIssue({ bookId, studentId, studentName, teacherId, teach
   if (!b) {
     throw new Error('Book not found');
   }
+  assertStudentCanIssueInFile(issues, sid, bookId);
+
   const issued = issuedCountForCatalogId(bookId, issues);
   const copies = Number(b.copies) || 1;
   if (issued >= copies) {
