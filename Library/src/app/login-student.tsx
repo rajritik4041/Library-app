@@ -44,7 +44,7 @@ export default function StudentLoginScreen() {
   };
 
   return (
-    <ScreenShell>
+    <ScreenShell centered>
       <PageHeader
         badge="Student"
         title="Student Login"

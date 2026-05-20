@@ -1,13 +1,38 @@
-# EJ MCAET Library — Desktop App (Windows)
+# EJ MCAET Library — Desktop App
+
+> **Mac laptop par step-by-step:** [MAC-LAPTOP-GUIDE-HINDI.md](MAC-LAPTOP-GUIDE-HINDI.md)
 
 ## Download
 
 | Platform | File | Kaise milega |
 |----------|------|----------------|
 | **Windows** | `EJ MCAET Library Setup 1.0.0.exe` | `Library/release/` folder (build ke baad) |
-| **macOS** | `EJ MCAET Library-x.x.x.dmg` | GitHub → Actions → **Build Desktop App** → **EJ-MCAET-Library-macOS** artifact |
+| **macOS** | `EJ MCAET Library-1.0.0.dmg` (ya similar) | Neeche **macOS download** dekhein |
+
+### macOS .dmg abhi download kaise karein
+
+Code GitHub par push ho chuka hai — **Build Desktop App** workflow chal chuki hogi.
+
+1. Browser mein kholo:  
+   **https://github.com/rajritik4041/Library-app/actions/workflows/build-desktop.yml**
+2. Sabse upar wali **green** run (commit: macOS dmg CI…) par click karein.
+3. Neeche scroll → **Artifacts** → **EJ-MCAET-Library-macOS** → Download (zip).
+4. Zip kholo — andar `.dmg` Mac par double-click / Applications mein drag karein.
+
+**PowerShell (login ke baad auto-download):**
+```powershell
+cd Library\scripts
+.\download-mac-dmg.ps1
+```
+(Pehli baar: `gh auth login` — GitHub username/password ya browser se login)
 
 Windows par Mac `.dmg` build nahi hota — Mac ke liye GitHub Actions se download karein (neeche).
+
+## Dark / Light mode
+
+Navbar mein **🌙 Dark** ya **☀️ Light** dabayein — choice save rehti hai. Android, Windows `.exe`, aur Mac `.dmg` teeno par kaam karti hai.
+
+**Library timing (IST):** Som–Shukr 9:00–17:00 · Shanivar 9:00–13:00 · Ravivar band.
 
 ## Install (kisi bhi user ke liye)
 
@@ -20,7 +45,7 @@ Windows par Mac `.dmg` build nahi hota — Mac ke liye GitHub Actions se downloa
 2. Install location choose karein → Install.
 3. Desktop ya Start Menu se **EJ MCAET Library** open karein.
 
-**Internet zaroori hai** — books aur login cloud server se aate hain.
+**Internet zaroori hai** — Android, Windows aur Mac **teeno same MongoDB** (Render) se books leta hain. Teacher add/delete ~12 sec mein sab par dikhega. About page par **API server** check karein: `library-app-2-e5ly.onrender.com`
 
 ## Kya kar sakte hain (bina extra setup)
 
@@ -62,7 +87,8 @@ build-desktop.bat
 **macOS (.dmg)** — Mac machine par:
 ```bash
 cd Library
-npm run desktop:pack
+npm install
+npm run desktop:pack:mac
 ```
 
 **Ya GitHub se (Windows se bhi):**

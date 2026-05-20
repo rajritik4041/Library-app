@@ -24,14 +24,20 @@ export default function WelcomeScreen() {
         justifyContent: 'center',
         backgroundColor: c.surface,
       },
+      content: {
+        width: '100%',
+        maxWidth: 520,
+        alignSelf: 'center',
+      },
       hero: {
         borderRadius: Radius.xl,
         padding: Spacing.five,
         gap: Spacing.two,
         marginBottom: Spacing.four,
+        alignItems: 'center',
       },
       heroBadge: {
-        alignSelf: 'flex-start',
+        alignSelf: 'center',
         backgroundColor: c.gold,
         color: c.navy,
         fontSize: 11,
@@ -41,13 +47,24 @@ export default function WelcomeScreen() {
         borderRadius: Radius.pill,
         overflow: 'hidden',
       },
-      heroTitle: { fontSize: 28, fontWeight: '800', color: '#fff' },
-      heroSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 15, lineHeight: 22 },
+      heroTitle: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#fff',
+        textAlign: 'center',
+      },
+      heroSubtitle: {
+        color: 'rgba(255,255,255,0.9)',
+        fontSize: 15,
+        lineHeight: 22,
+        textAlign: 'center',
+      },
       prompt: {
         fontSize: 18,
         fontWeight: '800',
         color: c.ink,
         marginBottom: Spacing.three,
+        textAlign: 'center',
       },
       roleCard: {
         flexDirection: 'row',
@@ -103,7 +120,8 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.page}>
       <CollegeNavbar active="library" />
-      <ScreenShell scroll={false}>
+      <ScreenShell scroll={false} centered>
+      <View style={styles.content}>
       <LinearGradient
         colors={[colors.navy, colors.navyMid, colors.navyLight]}
         start={{ x: 0, y: 0 }}
@@ -155,6 +173,7 @@ export default function WelcomeScreen() {
       <Pressable onPress={() => router.replace('/')}>
         <ThemedText style={styles.back}>← Back to college home</ThemedText>
       </Pressable>
+      </View>
       </ScreenShell>
     </View>
   );

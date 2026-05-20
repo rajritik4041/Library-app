@@ -30,7 +30,7 @@ export function SearchBar({
       inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: c.card,
+        backgroundColor: c.inputBg,
         borderRadius: Radius.lg,
         borderWidth: 1.5,
         borderColor: c.border,
@@ -41,9 +41,12 @@ export function SearchBar({
       input: {
         flex: 1,
         fontSize: 16,
+        color: c.inputText,
+        backgroundColor: c.inputBg,
         paddingVertical: Platform.select({ web: 14, default: Spacing.three }),
         paddingRight: Spacing.two,
         outlineStyle: 'none',
+        ...Platform.select({ web: { outlineWidth: 0 } }),
       } as object,
       clearBtn: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
       clearText: { fontSize: 14, color: c.inkMuted, fontWeight: '700' },
@@ -70,7 +73,7 @@ export function SearchBar({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={colors.inputPlaceholder}
-          style={[styles.input, { color: colors.inputText }]}
+          style={styles.input}
           autoCapitalize="none"
           autoCorrect={false}
           clearButtonMode="while-editing"

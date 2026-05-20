@@ -8,6 +8,10 @@ Same Expo app as Android — runs via **React Native Web** inside **Electron**.
 | Web browser | `npm run web` |
 | Windows / macOS / Linux | `npm run desktop` |
 
+**Theme:** In the app navbar, tap **🌙 Dark** / **☀️ Light** to switch modes (saved on device). Works on Android, Windows `.exe`, and Mac `.dmg`.
+
+**Physical library hours (IST):** Mon–Fri 9:00 AM–5:00 PM · Sat 9:00 AM–1:00 PM · Sun closed.
+
 ## Prerequisites
 
 1. Install dependencies:

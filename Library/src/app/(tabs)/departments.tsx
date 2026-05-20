@@ -26,12 +26,14 @@ export default function DepartmentsScreen() {
       },
       loadingText: { color: c.inkMuted, fontSize: 15 },
       banner: {
-        backgroundColor: '#fef3c7',
+        backgroundColor: c.warningBg,
         padding: Spacing.three,
         borderRadius: Radius.md,
         marginBottom: Spacing.two,
+        borderWidth: 1,
+        borderColor: c.border,
       },
-      bannerText: { color: '#92400e', fontWeight: '600', fontSize: 13 },
+      bannerText: { color: c.warningText, fontWeight: '600', fontSize: 13 },
       grid: { gap: Spacing.three },
       card: {
         backgroundColor: c.card,

@@ -44,7 +44,7 @@ export default function TeacherLoginScreen() {
   };
 
   return (
-    <ScreenShell>
+    <ScreenShell centered>
       <PageHeader
         badge="Teacher"
         title="Teacher Login"

@@ -46,8 +46,9 @@
       "router": {},
       "apiUrl": "https://library-app-2-e5ly.onrender.com",
       "eas": {
-        "projectId": "98813608-3376-4f08-87a7-f4eee501afee"
+        "projectId": "19967fcc-9914-4519-9a37-4a199cfccd71"
       }
-    }
+    },
+    "owner": "dineshyadav12"
   }
 }

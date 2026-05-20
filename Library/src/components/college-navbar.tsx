@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
@@ -149,6 +150,8 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
             );
           })}
         </ScrollView>
+
+        <ThemeToggle onDark compact={compact} />
 
         {isTeacher || isStudent ? (
           <Pressable onPress={logout} style={[styles.authBtn, compact && styles.authBtnCompact]}>

@@ -12,6 +12,7 @@ import React from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
@@ -44,6 +45,12 @@ export default function AppTabs() {
         paddingHorizontal: Spacing.three,
         paddingTop: Spacing.two,
         paddingBottom: Spacing.two,
+      },
+      headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.two,
+        flexShrink: 0,
       },
       headerInner: {
         maxWidth: MaxContentWidth,
@@ -120,17 +127,20 @@ export default function AppTabs() {
             <ThemedText style={styles.brandTitle}>EJ MCAET</ThemedText>
             <ThemedText style={styles.brandSub}>College Library</ThemedText>
           </View>
-          {isTeacher || isStudent ? (
-            <Pressable onPress={logout} style={styles.authBtn}>
-              <ThemedText style={styles.authBtnText}>
-                {isTeacher ? teacher?.teacherId : student?.userId} · Logout
-              </ThemedText>
-            </Pressable>
-          ) : (
-            <Pressable onPress={() => router.push('/welcome')} style={styles.authBtn}>
-              <ThemedText style={styles.authBtnText}>Sign in</ThemedText>
-            </Pressable>
-          )}
+          <View style={styles.headerActions}>
+            <ThemeToggle onDark compact />
+            {isTeacher || isStudent ? (
+              <Pressable onPress={logout} style={styles.authBtn}>
+                <ThemedText style={styles.authBtnText}>
+                  {isTeacher ? teacher?.teacherId : student?.userId} · Logout
+                </ThemedText>
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => router.push('/welcome')} style={styles.authBtn}>
+                <ThemedText style={styles.authBtnText}>Sign in</ThemedText>
+              </Pressable>
+            )}
+          </View>
         </ThemedView>
       </View>
 

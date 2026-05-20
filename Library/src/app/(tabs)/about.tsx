@@ -5,6 +5,7 @@ import { DetailRow } from '@/components/library/detail-row';
 import { PageHeader } from '@/components/library/page-header';
 import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
+import { API_URL } from '@/config/api';
 import { useBooksApi } from '@/context/books-api-context';
 import { Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
@@ -18,9 +19,27 @@ const RULES = [
 ];
 
 const TIMINGS = [
-  { day: 'Monday – Friday', time: '9:00 AM – 5:00 PM' },
-  { day: 'Saturday', time: '9:00 AM – 1:00 PM' },
+  { day: 'Monday – Friday', time: '9:00 AM – 5:00 PM (IST)' },
+  { day: 'Saturday', time: '9:00 AM – 1:00 PM (IST)' },
   { day: 'Sunday & Holidays', time: 'Closed' },
+];
+
+const PLATFORMS = [
+  {
+    name: 'Android (APK)',
+    access: 'Mobile app · Expo / EAS build',
+    hours: 'Same library hours · catalog works offline with cache',
+  },
+  {
+    name: 'Windows (.exe)',
+    access: 'Desktop installer · `Library/release/`',
+    hours: 'Mon–Fri 9 AM–5 PM · Sat 9 AM–1 PM (physical library)',
+  },
+  {
+    name: 'macOS (.dmg)',
+    access: 'Mac desktop app · GitHub Actions or Mac build',
+    hours: 'Same timings as Windows desktop · shared MongoDB catalog',
+  },
 ];
 
 export default function AboutScreen() {
@@ -91,6 +110,15 @@ export default function AboutScreen() {
       <View style={styles.card}>
         <ThemedText style={styles.cardTitle}>Live catalog (MongoDB)</ThemedText>
         <DetailRow label="Data source" value={dataSource === 'mongodb' ? 'MongoDB Atlas' : 'Offline cache'} />
+        <DetailRow label="API server" value={API_URL} />
+        <DetailRow
+          label="Sync"
+          value={
+            apiOnline
+              ? 'Live — add/delete ~12 sec par sab devices par'
+              : 'Offline — internet / server check karein'
+          }
+        />
         <DetailRow label="Book titles" value={String(stats.totalTitles)} />
         <DetailRow label="Total copies" value={String(stats.totalCopies)} />
         <DetailRow label="Available now" value={String(stats.availableCopies)} />
@@ -113,6 +141,16 @@ export default function AboutScreen() {
         <ThemedText style={styles.cardTitle}>Library Timings</ThemedText>
         {TIMINGS.map((row) => (
           <DetailRow key={row.day} label={row.day} value={row.time} />
+        ))}
+      </View>
+
+      <View style={styles.card}>
+        <ThemedText style={styles.cardTitle}>App on Android, Windows & Mac</ThemedText>
+        {PLATFORMS.map((row) => (
+          <View key={row.name} style={{ gap: 4, marginBottom: 8 }}>
+            <DetailRow label={row.name} value={row.access} />
+            <DetailRow label="Hours / notes" value={row.hours} />
+          </View>
         ))}
       </View>
 

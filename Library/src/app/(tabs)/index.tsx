@@ -48,12 +48,14 @@ export default function HomeScreen() {
         textAlign: 'center',
       },
       banner: {
-        backgroundColor: '#fef3c7',
+        backgroundColor: c.warningBg,
         padding: Spacing.three,
         borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: c.border,
       },
       bannerText: {
-        color: '#92400e',
+        color: c.warningText,
         fontWeight: '600',
         fontSize: 13,
       },
@@ -116,7 +118,7 @@ export default function HomeScreen() {
       },
       rackInput: {
         flex: 1,
-        backgroundColor: c.surface,
+        backgroundColor: c.inputBg,
         borderRadius: Radius.md,
         paddingHorizontal: Spacing.three,
         paddingVertical: 12,

@@ -1,10 +1,11 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { useColorScheme } from 'react-native';
-
 import { AuthProvider } from '@/context/auth-context';
 import { BooksApiProvider } from '@/context/books-api-context';
+import { ThemePreferenceProvider } from '@/context/theme-preference-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 
 function RootStack() {
@@ -13,6 +14,7 @@ function RootStack() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -39,10 +41,12 @@ function RootStack() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <BooksApiProvider>
-        <RootStack />
-      </BooksApiProvider>
-    </AuthProvider>
+    <ThemePreferenceProvider>
+      <AuthProvider>
+        <BooksApiProvider>
+          <RootStack />
+        </BooksApiProvider>
+      </AuthProvider>
+    </ThemePreferenceProvider>
   );
 }

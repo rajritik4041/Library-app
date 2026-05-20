@@ -24,12 +24,14 @@ export default function BooksScreen() {
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       offline: {
-        backgroundColor: '#fef3c7',
+        backgroundColor: c.warningBg,
         padding: Spacing.three,
         borderRadius: 12,
+        borderWidth: 1,
+        borderColor: c.border,
       },
       offlineText: {
-        color: '#92400e',
+        color: c.warningText,
         fontWeight: '600',
         fontSize: 13,
       },

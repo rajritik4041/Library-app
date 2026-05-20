@@ -18,6 +18,11 @@ export type LibraryColorScheme = {
   border: string;
   muted: string;
   success: string;
+  successSoft: string;
+  danger: string;
+  dangerSoft: string;
+  warningBg: string;
+  warningText: string;
   shadow: string;
   /** Form fields */
   inputBg: string;
@@ -43,6 +48,11 @@ export const libraryPaletteLight: LibraryColorScheme = {
   border: '#c5d4e8',
   muted: '#5a6d82',
   success: '#0d9488',
+  successSoft: '#d1fae5',
+  danger: '#991b1b',
+  dangerSoft: '#fee2e2',
+  warningBg: '#fef3c7',
+  warningText: '#92400e',
   shadow: 'rgba(10, 35, 66, 0.12)',
   inputBg: '#ffffff',
   inputText: '#000000',
@@ -67,6 +77,11 @@ export const libraryPaletteDark: LibraryColorScheme = {
   border: '#2a4060',
   muted: '#94a3b8',
   success: '#2dd4bf',
+  successSoft: '#134e4a',
+  danger: '#fca5a5',
+  dangerSoft: '#450a0a',
+  warningBg: '#3d2e0a',
+  warningText: '#fcd34d',
   shadow: 'rgba(0, 0, 0, 0.35)',
   inputBg: '#1a2d4a',
   inputText: '#f0f4f8',

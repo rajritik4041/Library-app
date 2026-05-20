@@ -3,6 +3,7 @@ import React from 'react';
 import { Image, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -86,6 +87,9 @@ function TabHeader() {
         fontWeight: '600',
       },
       headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.two,
         flexShrink: 0,
       },
       authBtn: {
@@ -114,6 +118,7 @@ function TabHeader() {
         </Pressable>
 
         <View style={styles.headerActions}>
+          <ThemeToggle onDark compact />
           {isTeacher || isStudent ? (
             <Pressable onPress={logout} style={styles.authBtn}>
               <ThemedText style={styles.authBtnText} numberOfLines={1}>
