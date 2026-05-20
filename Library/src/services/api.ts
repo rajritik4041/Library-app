@@ -20,15 +20,38 @@ async function request<T>(
   } catch {
     throw new Error('Network error — kya server chal raha hai? (npm run server)');
   }
-  const data = await response.json().catch(() => ({}));
+  const text = await response.text();
+  let data: Record<string, unknown> = {};
+  try {
+    data = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+  } catch {
+    if (/Cannot PUT \/api\/books/i.test(text)) {
+      throw new Error(
+        'Server par book edit abhi enable nahi — GitHub se latest backend deploy karein (Render redeploy).',
+      );
+    }
+  }
   if (!response.ok) {
-    throw new Error(data.error || `Request failed (${response.status})`);
+    throw new Error(
+      (typeof data.error === 'string' && data.error) || `Request failed (${response.status})`,
+    );
   }
   return data as T;
 }
 
 export const api = {
-  health: () => request<{ ok: boolean; mode?: 'mongodb' | 'file' }>('/api/health'),
+  health: () =>
+    request<{
+      ok: boolean;
+      mode?: 'mongodb' | 'file';
+      sync?: {
+        sheetCount: number;
+        mongoCount: number;
+        inSync: boolean;
+        sheetWriteOk?: boolean;
+        sheetWriteError?: string;
+      };
+    }>('/api/health'),
 
   loginTeacher: (teacherId: string, password: string) =>
     request<{ token: string; teacher: TeacherSession }>('/api/auth/teacher/login', {
@@ -167,15 +190,41 @@ export const api = {
       copies?: number;
     },
   ) =>
-    request<{ book: ApiBook }>('/api/books', {
+    request<{ book: ApiBook; sheetWarning?: string }>('/api/books', {
       method: 'POST',
       token,
       body: JSON.stringify(body),
     }),
 
+  updateBook: (
+    token: string,
+    catalogId: string,
+    body: {
+      title?: string;
+      authors?: string;
+      publisher?: string;
+      department?: string;
+      subject?: string;
+      rackNo?: string;
+      copies?: number;
+      serialNo?: number;
+    },
+  ) =>
+    request<{ book: ApiBook; sheetWarning?: string }>(
+      `/api/books/${encodeURIComponent(String(catalogId).trim())}`,
+      {
+        method: 'PUT',
+        token,
+        body: JSON.stringify(body),
+      },
+    ),
+
   deleteBook: (token: string, catalogId: string) =>
-    request(`/api/books/${encodeURIComponent(String(catalogId).trim())}`, {
-      method: 'DELETE',
-      token,
-    }),
+    request<{ ok: boolean; sheetWarning?: string }>(
+      `/api/books/${encodeURIComponent(String(catalogId).trim())}`,
+      {
+        method: 'DELETE',
+        token,
+      },
+    ),
 };

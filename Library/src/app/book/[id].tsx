@@ -14,13 +14,15 @@ import { getDepartmentLabel } from '@/constants/departments';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
+import { resolveBookCatalogId } from '@/lib/book-id';
 import type { ApiBook, ApiIssue } from '@/types/api';
 
 export default function BookDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>();
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
   const router = useRouter();
   const { isTeacher, token } = useAuth();
-  const { refresh, getBookById: getBookFromStore } = useBooksApi();
+  const { refresh, getBookById: getBookFromStore, books } = useBooksApi();
   const colors = useLibraryColors();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
@@ -104,6 +106,27 @@ export default function BookDetailScreen() {
       },
       loginBtnText: { color: c.accent, fontWeight: '700' },
       notFoundTitle: { fontSize: 22, fontWeight: '700', color: c.ink },
+      editCard: {
+        backgroundColor: c.card,
+        padding: Spacing.four,
+        borderRadius: Radius.lg,
+        gap: Spacing.two,
+        borderWidth: 1,
+        borderColor: c.border,
+        marginBottom: Spacing.four,
+      },
+      editToggle: {
+        alignSelf: 'flex-start',
+        paddingVertical: Spacing.two,
+      },
+      editToggleText: { color: c.accent, fontWeight: '700', fontSize: 15 },
+      saveBtn: {
+        backgroundColor: c.accent,
+        padding: Spacing.three,
+        borderRadius: Radius.md,
+        alignItems: 'center',
+      },
+      saveBtnText: { color: '#fff', fontWeight: '800' },
     }),
   );
 
@@ -112,6 +135,15 @@ export default function BookDetailScreen() {
   const [studentIdNo, setStudentIdNo] = useState('');
   const [studentName, setStudentName] = useState('');
   const [studentLookupError, setStudentLookupError] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editAuthors, setEditAuthors] = useState('');
+  const [editPublisher, setEditPublisher] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editSubject, setEditSubject] = useState('');
+  const [editRack, setEditRack] = useState('');
+  const [editCopies, setEditCopies] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -133,6 +165,49 @@ export default function BookDetailScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const startEdit = () => {
+    if (!book) return;
+    setEditTitle(book.title);
+    setEditAuthors(book.authors || '');
+    setEditPublisher(book.publisher || '');
+    setEditDepartment(book.department || '');
+    setEditSubject(book.subject || '');
+    setEditRack(book.rackNo || '');
+    setEditCopies(String(book.copies));
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!token || !book || !editTitle.trim()) {
+      Alert.alert('Error', 'Title is required');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const catalogId = resolveBookCatalogId(book.id, books.length ? books : [book]);
+      const { book: updated, sheetWarning } = await api.updateBook(token, catalogId, {
+        title: editTitle.trim(),
+        authors: editAuthors.trim(),
+        publisher: editPublisher.trim(),
+        department: editDepartment.trim(),
+        subject: editSubject.trim(),
+        rackNo: editRack.trim(),
+        copies: Number(editCopies) || book.copies,
+      });
+      setBook(updated);
+      setEditing(false);
+      await refresh();
+      Alert.alert(
+        sheetWarning ? 'Saved (Excel pending)' : 'Saved',
+        sheetWarning || 'Book updated — Google Sheet & MongoDB synced',
+      );
+    } catch (e) {
+      Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not save');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const lookupStudent = async () => {
     const idNo = studentIdNo.trim();
@@ -208,6 +283,75 @@ export default function BookDetailScreen() {
           copies={book.copies}
         />
       </LinearGradient>
+
+      {isTeacher ? (
+        <View style={styles.editCard}>
+          <Pressable style={styles.editToggle} onPress={() => (editing ? setEditing(false) : startEdit())}>
+            <ThemedText style={styles.editToggleText}>
+              {editing ? '✕ Cancel edit' : '✎ Edit book (teacher only)'}
+            </ThemedText>
+          </Pressable>
+          {editing ? (
+            <>
+              <TextInput
+                placeholder="Title *"
+                value={editTitle}
+                onChangeText={setEditTitle}
+                placeholderTextColor={colors.inputPlaceholder}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Authors"
+                value={editAuthors}
+                onChangeText={setEditAuthors}
+                placeholderTextColor={colors.inputPlaceholder}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Publisher"
+                value={editPublisher}
+                onChangeText={setEditPublisher}
+                placeholderTextColor={colors.inputPlaceholder}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Department"
+                value={editDepartment}
+                onChangeText={setEditDepartment}
+                placeholderTextColor={colors.inputPlaceholder}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Subject"
+                value={editSubject}
+                onChangeText={setEditSubject}
+                placeholderTextColor={colors.inputPlaceholder}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Rack no."
+                value={editRack}
+                onChangeText={setEditRack}
+                placeholderTextColor={colors.inputPlaceholder}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Copies"
+                value={editCopies}
+                onChangeText={setEditCopies}
+                keyboardType="number-pad"
+                placeholderTextColor={colors.inputPlaceholder}
+                style={styles.input}
+              />
+              <Pressable style={styles.saveBtn} onPress={saveEdit} disabled={savingEdit}>
+                <ThemedText style={styles.saveBtnText}>
+                  {savingEdit ? 'Saving…' : 'Save changes'}
+                </ThemedText>
+              </Pressable>
+            </>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={styles.detailsCard}>
         <ThemedText style={styles.sectionTitle}>Book Information</ThemedText>

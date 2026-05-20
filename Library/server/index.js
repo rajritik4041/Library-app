@@ -11,6 +11,7 @@ import dns from "dns";
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 import * as fileStore from './file-store.js';
+import * as sheetSync from './google-sheets-sync.js';
 
 dotenv.config();
 
@@ -178,6 +179,17 @@ async function findStudentByKey(key) {
 
 async function getActiveIssueCount(bookId) {
   return Issue.countDocuments({ book: bookId, status: 'issued' });
+}
+
+function formatSheetWarning(sheetPush) {
+  const email =
+    sheetPush.serviceAccountEmail ||
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() ||
+    'service account email';
+  return (
+    sheetPush.hint ||
+    `MongoDB mein save ho gaya, par Excel update fail. Google Sheet kholo → Share → ${email} ko Editor banaein.`
+  );
 }
 
 async function requireRegisteredStudentByIdNo(studentIdInput) {
@@ -703,7 +715,8 @@ app.post('/api/books', authTeacher, async (req, res) => {
     }
     const maxSerial = await Book.findOne().sort({ serialNo: -1 }).select('serialNo');
     const nextSerial = serialNo || (maxSerial?.serialNo || 0) + 1;
-    const catalogId = String(Date.now());
+    const catalogId = String(nextSerial);
+    sheetSync.noteMongoChanged();
     const book = await Book.create({
       catalogId,
       serialNo: nextSerial,
@@ -715,10 +728,75 @@ app.post('/api/books', authTeacher, async (req, res) => {
       rackNo: String(rackNo ?? ''),
       copies: Math.max(1, Number(copies) || 1),
     });
-    res.status(201).json({ book: await enrichBook(book) });
+    const sheetPush = await sheetSync.pushAfterMongoCrud(Book);
+    const sheetWarning = sheetPush.ok
+      ? undefined
+      : formatSheetWarning(sheetPush);
+    if (sheetWarning) console.warn('Sheet push after add:', sheetPush.error);
+    res.status(201).json({ book: await enrichBook(book), sheetWarning });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Failed to add book' });
+  }
+});
+
+app.put('/api/books/:catalogId', authTeacher, async (req, res) => {
+  try {
+    const catalogKey = decodeURIComponent(String(req.params.catalogId || ''));
+    const { title, authors, publisher, department, subject, rackNo, copies, serialNo } = req.body;
+    if (USE_FILE_MODE) {
+      const found = await findBookByCatalogOrSerial(catalogKey);
+      if (!found) {
+        return res.status(404).json({ error: 'Book not found' });
+      }
+      const book = fileStore.fileUpdateBook(found.catalogId, {
+        title,
+        authors,
+        publisher,
+        department,
+        subject,
+        rackNo,
+        copies,
+        serialNo,
+      });
+      return res.json({ book });
+    }
+    const found = await findBookByCatalogOrSerial(catalogKey);
+    if (!found) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    const book = await Book.findOne({ catalogId: found.catalogId });
+    if (!book) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    if (title?.trim()) book.title = title.trim();
+    if (authors !== undefined) book.authors = String(authors).trim();
+    if (publisher !== undefined) book.publisher = String(publisher).trim();
+    if (department !== undefined) book.department = String(department).trim() || 'MISC';
+    if (subject !== undefined) book.subject = String(subject).trim() || 'MISC';
+    if (rackNo !== undefined) book.rackNo = String(rackNo);
+    if (copies !== undefined) book.copies = Math.max(1, Number(copies) || 1);
+    if (serialNo !== undefined && Number(serialNo) > 0) {
+      const nextSerial = Number(serialNo);
+      const clash = await Book.findOne({
+        serialNo: nextSerial,
+        catalogId: { $ne: book.catalogId },
+      });
+      if (clash) {
+        return res.status(409).json({ error: `Serial ${nextSerial} already used by another book` });
+      }
+      book.serialNo = nextSerial;
+      book.catalogId = String(nextSerial);
+    }
+    sheetSync.noteMongoChanged();
+    await book.save();
+    const sheetPush = await sheetSync.pushAfterMongoCrud(Book);
+    const sheetWarning = sheetPush.ok ? undefined : formatSheetWarning(sheetPush);
+    if (sheetWarning) console.warn('Sheet push after edit:', sheetPush.error);
+    res.json({ book: await enrichBook(book), sheetWarning });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Failed to update book' });
   }
 });
 
@@ -745,8 +823,12 @@ app.delete('/api/books/:catalogId', authTeacher, async (req, res) => {
     if (active > 0) {
       return res.status(400).json({ error: 'Cannot delete: book has active issues. Return all copies first.' });
     }
+    sheetSync.noteMongoChanged();
     await Book.deleteOne({ _id: book._id });
-    res.json({ ok: true });
+    const sheetPush = await sheetSync.pushAfterMongoCrud(Book);
+    const sheetWarning = sheetPush.ok ? undefined : formatSheetWarning(sheetPush);
+    if (sheetWarning) console.warn('Sheet push after delete:', sheetPush.error);
+    res.json({ ok: true, sheetWarning });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Failed to delete book' });
@@ -975,8 +1057,53 @@ app.get('/api/stats', async (_req, res) => {
   }
 });
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, mode: USE_FILE_MODE ? 'file' : 'mongodb' });
+app.get('/api/health', async (_req, res) => {
+  const payload = { ok: true, mode: USE_FILE_MODE ? 'file' : 'mongodb' };
+  if (!USE_FILE_MODE) {
+    if (sheetSync.isSheetsSyncEnabled()) {
+      try {
+        payload.sync = await sheetSync.getSyncStatus(Book);
+      } catch (e) {
+        payload.sync = { enabled: true, error: e.message };
+      }
+    } else {
+      payload.sync = {
+        enabled: false,
+        sheetWriteOk: false,
+        hint:
+          'Render/.env par GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY set karein — tabhi Excel↔Mongo sync chalegi.',
+      };
+    }
+  }
+  res.json(payload);
+});
+
+app.get('/api/sync/status', async (_req, res) => {
+  if (USE_FILE_MODE) {
+    return res.json({ enabled: false, mode: 'file' });
+  }
+  try {
+    const status = await sheetSync.getSyncStatus(Book);
+    res.json(status);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/sync/reconcile', authTeacher, async (_req, res) => {
+  if (USE_FILE_MODE) {
+    return res.status(400).json({ error: 'Sync requires MongoDB mode' });
+  }
+  if (!sheetSync.isSheetsSyncEnabled()) {
+    return res.status(400).json({ error: 'Google Sheets not configured in .env' });
+  }
+  try {
+    const result = await sheetSync.reconcile(Book, getActiveIssueCount);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'Reconcile failed' });
+  }
 });
 
 app.post('/api/sync-catalog', authTeacher, async (_req, res) => {
@@ -1037,6 +1164,31 @@ async function start() {
       await seedTeacher();
       await migrateStudentUserIds();
       await seedFromCatalog();
+      if (sheetSync.isSheetsSyncEnabled()) {
+        try {
+          await sheetSync.bootstrapSyncHashes(Book);
+          const writeCheck = await sheetSync.verifySheetWriteAccess();
+          if (!writeCheck.ok) {
+            console.warn(
+              '⚠ Sheet WRITE blocked — app→Excel sync nahi chalega jab tak sheet share na ho:',
+              process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+              '(Editor)',
+              writeCheck.error,
+            );
+          }
+          const result = await sheetSync.reconcile(Book, getActiveIssueCount);
+          console.log(
+            `Initial sync: ${result.direction} | sheet=${result.sheetCount} mongo=${result.mongoCount} inSync=${result.inSync}`,
+          );
+          sheetSync.startSheetSyncLoop(
+            Book,
+            getActiveIssueCount,
+            Number(process.env.SHEET_SYNC_INTERVAL_MS || 30000),
+          );
+        } catch (e) {
+          console.warn('Google Sheets initial sync:', e.message);
+        }
+      }
     } catch (e) {
       console.warn('MongoDB connect failed → FILE mode:', e.message);
       USE_FILE_MODE = true;

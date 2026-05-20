@@ -1,5 +1,5 @@
 /**
- * Excel → catalog.json → backend/data (Render deploy)
+ * Library/server → backend/ (Render deploy source)
  * Run from repo root: npm run sync-backend
  */
 const fs = require('fs');
@@ -8,18 +8,29 @@ const { execSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const library = path.join(root, 'Library');
+const server = path.join(library, 'server');
 const backend = path.join(root, 'backend');
 const data = path.join(backend, 'data');
 
-console.log('1) Import Excel → Library/src/data/catalog.json');
-execSync('node ./scripts/import-books.js', { cwd: library, stdio: 'inherit' });
+const skipImport =
+  process.argv.includes('--no-import') || process.env.SKIP_CATALOG_IMPORT === '1';
+const excelPath = path.join(library, 'assets', 'sheets.xlsx');
+
+if (!skipImport && fs.existsSync(excelPath)) {
+  console.log('1) Import Excel → Library/src/data/catalog.json');
+  execSync('node ./scripts/import-books.js', { cwd: library, stdio: 'inherit' });
+} else {
+  console.log('1) Skip Excel import (use existing catalog.json)');
+}
 
 fs.mkdirSync(data, { recursive: true });
 
 const copies = [
   [path.join(library, 'src', 'data', 'catalog.json'), path.join(data, 'catalog.json')],
-  [path.join(library, 'server', 'index.js'), path.join(backend, 'index.js')],
-  [path.join(library, 'server', 'file-store.js'), path.join(backend, 'file-store.js')],
+  [path.join(server, 'index.js'), path.join(backend, 'index.js')],
+  [path.join(server, 'file-store.js'), path.join(backend, 'file-store.js')],
+  [path.join(server, 'google-sheets-sync.js'), path.join(backend, 'google-sheets-sync.js')],
+  [path.join(server, 'package.json'), path.join(backend, 'package.json')],
 ];
 
 for (const [from, to] of copies) {
@@ -39,7 +50,22 @@ store = store.replace(
   "path.join(__dirname, '..', 'src', 'data', 'catalog.json')",
   "path.join(__dirname, 'data', 'catalog.json')",
 );
+store = store.replace(
+  "path.join(__dirname, '..', 'public', 'catalog.json')",
+  "path.join(__dirname, 'data', 'catalog.json')",
+);
 fs.writeFileSync(path.join(backend, 'file-store.js'), store);
 
+let sync = fs.readFileSync(path.join(backend, 'google-sheets-sync.js'), 'utf8');
+sync = sync.replace(
+  "path.join(__dirname, '..', 'src', 'data', 'catalog.json')",
+  "path.join(__dirname, 'data', 'catalog.json')",
+);
+sync = sync.replace(
+  "path.join(__dirname, '..', 'public', 'catalog.json')",
+  "path.join(__dirname, 'data', 'catalog.json')",
+);
+fs.writeFileSync(path.join(backend, 'google-sheets-sync.js'), sync);
+
 const catalog = JSON.parse(fs.readFileSync(path.join(data, 'catalog.json'), 'utf8'));
-console.log(`✓ backend ready: ${catalog.books?.length ?? 0} books`);
+console.log(`✓ backend synced: ${catalog.books?.length ?? 0} books (Render deploy ready)`);

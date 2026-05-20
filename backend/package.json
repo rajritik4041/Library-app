@@ -8,13 +8,16 @@
   },
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "seed": "node seed.js",
+    "postinstall": "node -e \"const fs=require('fs');const p='data/catalog.json';if(!fs.existsSync(p)){console.warn('WARN: data/catalog.json missing — run npm run sync-backend from repo root');}\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "googleapis": "^144.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.3"
   }
