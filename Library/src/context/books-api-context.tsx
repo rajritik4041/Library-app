@@ -1,6 +1,24 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { InteractionManager } from 'react-native';
 
-import { getLocalApiBooks, mergeCatalogWithApi } from '@/lib/catalog-to-api';
+import { API_URL } from '@/config/api';
+import { getLocalApiBooks } from '@/lib/catalog-to-api';
+import {
+  deriveStatsFromBooks,
+  findApiBookById,
+  uniqueDepartments,
+  uniqueRacks,
+  uniqueSubjects,
+  booksInDepartment,
+  type LibraryStats,
+} from '@/lib/api-books';
 import { api } from '@/services/api';
 import type { ApiBook } from '@/types/api';
 
@@ -9,44 +27,95 @@ type BooksApiContextValue = {
   loading: boolean;
   error: string | null;
   apiOnline: boolean;
+  apiMode: 'mongodb' | 'file' | null;
+  stats: LibraryStats;
+  departments: string[];
+  racks: string[];
+  subjects: string[];
+  dataSource: 'mongodb' | 'offline-cache' | 'none';
+  getBookById: (id: string) => ApiBook | undefined;
+  booksByDepartment: (department: string) => ApiBook[];
   refresh: () => Promise<void>;
 };
 
 const BooksApiContext = createContext<BooksApiContextValue | null>(null);
 
+const EMPTY_STATS = deriveStatsFromBooks([]);
+
 /**
- * Pehle hamesha Excel → catalog.json se list.
- * API online ho to issue counts merge (Mongo / file server).
+ * Primary data source: MongoDB via Library API.
+ * Excel/catalog.json sirf offline fallback.
  */
 export function BooksApiProvider({ children }: { children: React.ReactNode }) {
-  const [books, setBooks] = useState<ApiBook[]>(() => getLocalApiBooks());
+  const [books, setBooks] = useState<ApiBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [apiOnline, setApiOnline] = useState(false);
+  const [apiMode, setApiMode] = useState<'mongodb' | 'file' | null>(null);
+  const [dataSource, setDataSource] = useState<'mongodb' | 'offline-cache' | 'none'>('none');
+  const [activeIssues, setActiveIssues] = useState(0);
 
   const refresh = useCallback(async () => {
-    const local = getLocalApiBooks();
-    setBooks(local);
+    setLoading(true);
     setError(null);
 
+    await new Promise<void>((resolve) => {
+      InteractionManager.runAfterInteractions(() => resolve());
+    });
+
     try {
-      await api.health();
-      const { books: remote } = await api.getBooks();
-      setApiOnline(true);
-      if (remote.length > 0) {
-        setBooks(mergeCatalogWithApi(local, remote));
-      } else {
-        setBooks(local);
+      const health = await api.health();
+      const mode = health.mode === 'mongodb' ? 'mongodb' : 'file';
+      setApiMode(mode);
+
+      if (mode !== 'mongodb') {
+        setApiOnline(false);
+        setError(
+          `MongoDB server ready nahi (${API_URL}). Render par MONGODB_URI set karein.`,
+        );
+        const cached = getLocalApiBooks();
+        if (cached.length > 0) {
+          setBooks(cached);
+          setDataSource('offline-cache');
+        } else {
+          setBooks([]);
+          setDataSource('none');
+        }
+        return;
       }
+
+      const [{ books: remote }, statsRes] = await Promise.all([
+        api.getBooks(),
+        api.getStats().catch(() => null),
+      ]);
+
+      setBooks(remote);
+      setApiOnline(true);
+      setDataSource('mongodb');
+      setError(null);
+      setActiveIssues(statsRes?.activeIssues ?? 0);
     } catch (e) {
       setApiOnline(false);
+      setApiMode(null);
       const msg = e instanceof Error ? e.message : 'API offline';
+      const isNetwork =
+        msg.includes('fetch') ||
+        msg.includes('Network') ||
+        msg.includes('Failed to fetch') ||
+        msg.includes('Aborted');
       setError(
-        msg.includes('fetch') || msg.includes('Network')
-          ? 'Server band hai — npm run server chalayein. Tabhi teacher login / issue kaam karega. Kitabein Excel se yahin dikhengi.'
+        isNetwork
+          ? `MongoDB server tak nahi pahunch rahe (${API_URL}). Internet check karein; retry karein.`
           : msg,
       );
-      setBooks(local);
+      const cached = getLocalApiBooks();
+      if (cached.length > 0) {
+        setBooks(cached);
+        setDataSource('offline-cache');
+      } else {
+        setBooks([]);
+        setDataSource('none');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,13 +123,57 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 20000);
+    const id = setInterval(refresh, 30000);
     return () => clearInterval(id);
   }, [refresh]);
 
+  const stats = useMemo(
+    () => deriveStatsFromBooks(books, activeIssues),
+    [books, activeIssues],
+  );
+
+  const departments = useMemo(() => uniqueDepartments(books), [books]);
+  const racks = useMemo(() => uniqueRacks(books), [books]);
+  const subjects = useMemo(() => uniqueSubjects(books), [books]);
+
+  const getBookById = useCallback((id: string) => findApiBookById(books, id), [books]);
+
+  const booksByDepartment = useCallback(
+    (department: string) => booksInDepartment(books, department),
+    [books],
+  );
+
   const value = useMemo(
-    () => ({ books, loading, error, apiOnline, refresh }),
-    [books, loading, error, apiOnline, refresh],
+    () => ({
+      books,
+      loading,
+      error,
+      apiOnline,
+      apiMode,
+      stats,
+      departments,
+      racks,
+      subjects,
+      dataSource,
+      getBookById,
+      booksByDepartment,
+      refresh,
+    }),
+    [
+      books,
+      loading,
+      error,
+      apiOnline,
+      apiMode,
+      stats,
+      departments,
+      racks,
+      subjects,
+      dataSource,
+      getBookById,
+      booksByDepartment,
+      refresh,
+    ],
   );
 
   return <BooksApiContext.Provider value={value}>{children}</BooksApiContext.Provider>;
@@ -72,4 +185,10 @@ export function useBooksApi() {
     throw new Error('useBooksApi must be used within BooksApiProvider');
   }
   return ctx;
+}
+
+/** @deprecated use useBooksApi — MongoDB is the single source when online */
+export function useLibraryStats() {
+  const { stats, apiOnline, dataSource, loading, error, refresh } = useBooksApi();
+  return { stats, apiOnline, dataSource, loading, error, refresh };
 }

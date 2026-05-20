@@ -24,7 +24,7 @@ export default function StudentLoginScreen() {
     setLoading(true);
     try {
       await loginStudent(userId, password);
-      router.replace('/(tabs)/issued');
+      router.replace('/(tabs)/issued' as const);
     } catch (e) {
       Alert.alert('Login failed', e instanceof Error ? e.message : 'Try again');
     } finally {

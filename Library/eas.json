@@ -14,13 +14,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://library-app-x9zn.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://library-app-2-e5ly.onrender.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://library-app-x9zn.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://library-app-2-e5ly.onrender.com"
       }
     }
   },

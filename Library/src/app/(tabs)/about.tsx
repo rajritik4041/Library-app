@@ -1,10 +1,11 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { DetailRow } from '@/components/library/detail-row';
 import { PageHeader } from '@/components/library/page-header';
 import { ScreenShell } from '@/components/library/screen-shell';
 import { ThemedText } from '@/components/themed-text';
+import { useBooksApi } from '@/context/books-api-context';
 import { LibraryColors, Spacing } from '@/constants/theme';
 
 const RULES = [
@@ -22,13 +23,27 @@ const TIMINGS = [
 ];
 
 export default function AboutScreen() {
+  const { stats, apiOnline, dataSource, refresh } = useBooksApi();
+
   return (
     <ScreenShell>
       <PageHeader
-        badge="About"
+        badge={apiOnline ? 'MongoDB' : 'Offline'}
         title="EJ MCAET Library"
-        subtitle="Engineering college library management — digital catalog for the entire campus."
+        subtitle="Engineering college library — live data from MongoDB database."
       />
+
+      <View style={styles.card}>
+        <ThemedText style={styles.cardTitle}>Live catalog (MongoDB)</ThemedText>
+        <DetailRow label="Data source" value={dataSource === 'mongodb' ? 'MongoDB Atlas' : 'Offline cache'} />
+        <DetailRow label="Book titles" value={String(stats.totalTitles)} />
+        <DetailRow label="Total copies" value={String(stats.totalCopies)} />
+        <DetailRow label="Available now" value={String(stats.availableCopies)} />
+        <DetailRow label="Currently issued" value={String(stats.activeIssues)} />
+        <Pressable onPress={refresh} style={styles.refreshBtn}>
+          <ThemedText style={styles.refreshText}>↻ Refresh from server</ThemedText>
+        </Pressable>
+      </View>
 
       <View style={styles.card}>
         <ThemedText style={styles.cardTitle}>About the Library</ThemedText>
@@ -114,5 +129,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: LibraryColors.muted,
     paddingBottom: Spacing.five,
+  },
+  refreshBtn: {
+    marginTop: Spacing.two,
+    alignSelf: 'flex-start',
+  },
+  refreshText: {
+    color: LibraryColors.accent,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

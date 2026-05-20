@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/library/book-card';
 import { FilterChips } from '@/components/library/filter-chips';
@@ -11,35 +11,15 @@ import { SearchBar } from '@/components/library/search-bar';
 import { ThemedText } from '@/components/themed-text';
 import { useBooksApi } from '@/context/books-api-context';
 import { LibraryColors, Spacing } from '@/constants/theme';
-import { matchesRack } from '@/lib/books';
-import type { ApiBook } from '@/types/api';
-
-function filterBooks(
-  books: ApiBook[],
-  query: string,
-  department?: string,
-  subject?: string,
-  rack?: string,
-) {
-  const q = query.trim().toLowerCase();
-  return books.filter((book) => {
-    if (department && book.department !== department) return false;
-    if (subject && book.subject !== subject) return false;
-    if (rack && !matchesRack(rack, book.rackNo)) return false;
-    if (!q) return true;
-    const haystack = [book.title, book.authors, book.publisher, book.department, book.subject, book.rackNo, String(book.serialNo)]
-      .join(' ')
-      .toLowerCase();
-    return haystack.includes(q) || matchesRack(q, book.rackNo);
-  });
-}
+import { filterApiBooks, matchesRack } from '@/lib/api-books';
 
 export default function BooksScreen() {
   const { department: deptParam, rack: rackParam } = useLocalSearchParams<{
     department?: string;
     rack?: string;
   }>();
-  const { books, apiOnline, error, refresh } = useBooksApi();
+  const { books, apiOnline, error, refresh, loading, subjects, departments: deptList } =
+    useBooksApi();
 
   const [query, setQuery] = useState('');
   const [department, setDepartment] = useState<string>();
@@ -57,21 +37,13 @@ export default function BooksScreen() {
     }
   }, [rackParam]);
 
-  const departments = useMemo(
-    () => [...new Set(books.map((b) => b.department).filter(Boolean))].sort(),
-    [books],
-  );
-  const subjects = useMemo(
-    () => [...new Set(books.map((b) => b.subject).filter(Boolean))].sort(),
-    [books],
-  );
   const racks = useMemo(
     () => [...new Set(books.map((b) => b.rackNo).filter(Boolean))].sort(),
     [books],
   );
 
   const results = useMemo(
-    () => filterBooks(books, query, department, subject, rack),
+    () => filterApiBooks(books, query, department, subject, rack),
     [books, query, department, subject, rack],
   );
 
@@ -87,16 +59,14 @@ export default function BooksScreen() {
   return (
     <ScreenShell>
       <PageHeader
-        badge="Catalog"
+        badge={apiOnline ? 'MongoDB' : 'Offline'}
         title="Search Books"
-        subtitle={`${books.length} books · Green = in library · Red = issued out`}
+        subtitle={`${books.length} books from database · ${loading ? 'Updating…' : 'Green = in library'}`}
       />
 
       {!apiOnline && error ? (
         <Pressable style={styles.offline} onPress={refresh}>
-          <ThemedText style={styles.offlineText}>
-            ⚠ Server offline — run: npm run server · Tap to retry
-          </ThemedText>
+          <ThemedText style={styles.offlineText}>⚠ {error} · Tap to retry</ThemedText>
         </Pressable>
       ) : null}
 
@@ -122,7 +92,7 @@ export default function BooksScreen() {
 
       <View style={styles.filterBlock}>
         <ThemedText style={styles.filterLabel}>Department</ThemedText>
-        <FilterChips options={departments} selected={department} onSelect={setDepartment} />
+        <FilterChips options={deptList} selected={department} onSelect={setDepartment} />
       </View>
 
       <View style={styles.filterBlock}>
@@ -130,21 +100,27 @@ export default function BooksScreen() {
         <FilterChips options={subjects} selected={subject} onSelect={setSubject} />
       </View>
 
-      <View style={styles.list}>
-        {results.length === 0 ? (
-          <View style={styles.empty}>
-            <ThemedText style={styles.emptyTitle}>No books found</ThemedText>
-          </View>
-        ) : (
-          results.map((book) => (
+      {results.length === 0 ? (
+        <View style={styles.empty}>
+          <ThemedText style={styles.emptyTitle}>No books found</ThemedText>
+        </View>
+      ) : (
+        <FlatList
+          data={results}
+          keyExtractor={(item) => item.id}
+          scrollEnabled={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={16}
+          windowSize={5}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
             <BookCard
-              key={book.id}
-              book={book}
-              highlightRack={Boolean((query || rack) && matchesRack(query || rack || '', book.rackNo))}
+              book={item}
+              highlightRack={Boolean((query || rack) && matchesRack(query || rack || '', item.rackNo))}
             />
-          ))
-        )}
-      </View>
+          )}
+        />
+      )}
     </ScreenShell>
   );
 }

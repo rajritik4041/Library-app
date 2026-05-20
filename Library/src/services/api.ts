@@ -28,7 +28,7 @@ async function request<T>(
 }
 
 export const api = {
-  health: () => request<{ ok: boolean }>('/api/health'),
+  health: () => request<{ ok: boolean; mode?: 'mongodb' | 'file' }>('/api/health'),
 
   loginTeacher: (teacherId: string, password: string) =>
     request<{ token: string; teacher: TeacherSession }>('/api/auth/teacher/login', {

@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AvailabilityBadge } from '@/components/library/availability-badge';
 import { ThemedText } from '@/components/themed-text';
 import { LibraryColors, Radius, Spacing } from '@/constants/theme';
-import { getDepartmentLabel } from '@/lib/books';
+import { getDepartmentLabel } from '@/constants/departments';
 import type { ApiBook } from '@/types/api';
 
 type BookCardProps = {
