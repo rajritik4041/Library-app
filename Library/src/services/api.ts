@@ -1,5 +1,12 @@
 import { API_URL } from '@/config/api';
-import type { ApiBook, ApiIssue, ApiStudent, StudentSession, TeacherSession } from '@/types/api';
+import type {
+  ApiBook,
+  ApiIssue,
+  ApiStudent,
+  DeanSession,
+  StudentSession,
+  TeacherSession,
+} from '@/types/api';
 
 async function request<T>(
   path: string,
@@ -58,6 +65,54 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ teacherId, password }),
     }),
+
+  loginDean: (deanId: string, password: string) =>
+    request<{ token: string; dean: DeanSession }>('/api/auth/dean/login', {
+      method: 'POST',
+      body: JSON.stringify({ deanId, password }),
+    }),
+
+  getDeanTeachers: (token: string) =>
+    request<{ teachers: TeacherSession[] }>('/api/dean/teachers', { token }),
+
+  createDeanTeacher: (
+    token: string,
+    body: {
+      teacherId: string;
+      password: string;
+      name: string;
+      mobile?: string;
+      department?: string;
+      inCharge?: string;
+    },
+  ) =>
+    request<{ teacher: TeacherSession }>('/api/dean/teachers', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(body),
+    }),
+
+  updateDeanTeacher: (
+    token: string,
+    teacherId: string,
+    body: {
+      password?: string;
+      name?: string;
+      mobile?: string;
+      department?: string;
+      inCharge?: string;
+    },
+  ) =>
+    request<{ teacher: TeacherSession }>(
+      `/api/dean/teachers/${encodeURIComponent(teacherId.trim().toUpperCase())}`,
+      { method: 'PUT', token, body: JSON.stringify(body) },
+    ),
+
+  deleteDeanTeacher: (token: string, teacherId: string) =>
+    request<{ ok: boolean }>(
+      `/api/dean/teachers/${encodeURIComponent(teacherId.trim().toUpperCase())}`,
+      { method: 'DELETE', token },
+    ),
 
   loginStudent: (userId: string, password: string) =>
     request<{ token: string; student: StudentSession }>('/api/auth/student/login', {
@@ -223,12 +278,13 @@ export const api = {
       },
     ),
 
-  deleteBook: (token: string, catalogId: string) =>
+  deleteBook: (token: string, catalogId: string, password: string) =>
     request<{ ok: boolean; sheetWarning?: string }>(
       `/api/books/${encodeURIComponent(String(catalogId).trim())}`,
       {
         method: 'DELETE',
         token,
+        body: JSON.stringify({ password }),
       },
     ),
 };

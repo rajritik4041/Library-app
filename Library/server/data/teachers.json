@@ -1,0 +1,20 @@
+[
+  {
+    "teacherId": "T001",
+    "passwordHash": "$2a$10$L2m8S6glSqb3XCoKOLBdXeQABnWuwso1zSUXhPgu/DCwIebTDwUqy",
+    "name": "Shiwam Sir",
+    "mobile": "9236134041",
+    "department": "CSE",
+    "inCharge": "Library Incharge",
+    "createdAt": "2026-05-21T07:30:44.855Z"
+  },
+  {
+    "teacherId": "T002",
+    "passwordHash": "$2a$10$sFoDs9nOOTqCxA3ZLPdHAO9yUpGXmPc6XOT4gh9d53P8XeYwFaw0a",
+    "name": "Ankit",
+    "mobile": "9236134041",
+    "department": "CSE",
+    "inCharge": "Math",
+    "createdAt": "2026-05-21T07:31:27.604Z"
+  }
+]

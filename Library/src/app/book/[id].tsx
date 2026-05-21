@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AvailabilityBadge } from '@/components/library/availability-badge';
 import { DetailRow } from '@/components/library/detail-row';
@@ -26,13 +26,14 @@ import {
   studentAlreadyHasBookOnPage,
   validateStudentCanIssue,
 } from '@/lib/issue-limits';
+import { showAlert } from '@/lib/show-alert';
 import type { ApiBook, ApiIssue } from '@/types/api';
 
 export default function BookDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(idParam) ? idParam[0] : idParam;
   const router = useRouter();
-  const { isTeacher, token } = useAuth();
+  const { isStaff, token } = useAuth();
   const { refresh, getBookById: getBookFromStore, books } = useBooksApi();
   const colors = useLibraryColors();
   const styles = useThemedStyles((c) =>
@@ -61,18 +62,18 @@ export default function BookDetailScreen() {
         marginBottom: Spacing.two,
       },
       issuesCard: {
-        backgroundColor: '#fff7ed',
+        backgroundColor: c.warningBg,
         padding: Spacing.four,
         borderRadius: Radius.lg,
         gap: Spacing.two,
         borderWidth: 1,
-        borderColor: '#fed7aa',
+        borderColor: c.border,
       },
       issueRow: {
         gap: 4,
         paddingVertical: Spacing.two,
         borderBottomWidth: 1,
-        borderBottomColor: '#fed7aa',
+        borderBottomColor: c.border,
       },
       issueStudent: { fontWeight: '800', color: c.ink, fontSize: 15 },
       issueMeta: { fontSize: 13, color: c.inkMuted },
@@ -109,8 +110,8 @@ export default function BookDetailScreen() {
       },
       issueBtnText: { color: '#fff', fontWeight: '800' },
       issueHint: { fontSize: 13, color: c.inkMuted, lineHeight: 20 },
-      issueOk: { fontSize: 14, fontWeight: '700', color: '#15803d' },
-      issueErr: { fontSize: 13, color: '#b91c1c', lineHeight: 20 },
+      issueOk: { fontSize: 14, fontWeight: '700', color: c.success },
+      issueErr: { fontSize: 13, color: c.danger, lineHeight: 20 },
       loginBtn: {
         padding: Spacing.three,
         alignItems: 'center',
@@ -147,6 +148,7 @@ export default function BookDetailScreen() {
   const [studentIdNo, setStudentIdNo] = useState('');
   const [studentName, setStudentName] = useState('');
   const [studentLookupError, setStudentLookupError] = useState('');
+  const [issueError, setIssueError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editAuthors, setEditAuthors] = useState('');
@@ -192,7 +194,7 @@ export default function BookDetailScreen() {
 
   const saveEdit = async () => {
     if (!token || !book || !editTitle.trim()) {
-      Alert.alert('Error', 'Title is required');
+      showAlert('Error', 'Title is required');
       return;
     }
     setSavingEdit(true);
@@ -210,12 +212,12 @@ export default function BookDetailScreen() {
       setBook(enrichApiBook(updated));
       setEditing(false);
       await refresh();
-      Alert.alert(
+      showAlert(
         sheetWarning ? 'Saved (Excel pending)' : 'Saved',
         sheetWarning || 'Book updated — Google Sheet & MongoDB synced',
       );
     } catch (e) {
-      Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not save');
+      showAlert('Update failed', e instanceof Error ? e.message : 'Could not save');
     } finally {
       setSavingEdit(false);
     }
@@ -240,27 +242,31 @@ export default function BookDetailScreen() {
   };
 
   const issueToStudent = async () => {
-    if (!token || !id || !studentIdNo.trim()) {
-      Alert.alert('Error', 'Student ID No (enrollment) required');
-      return;
-    }
-    if (!studentName.trim()) {
-      Alert.alert('Error', 'Student registered nahi. Sahi ID No likhein — User ID se issue nahi hogi.');
+    setIssueError(null);
+    const idNo = studentIdNo.trim();
+    if (!token || !id || !idNo) {
+      const msg = 'Student ID No (enrollment) zaroori hai';
+      setIssueError(msg);
+      showAlert('Error', msg);
       return;
     }
     try {
-      const { student } = await api.lookupStudentByIdNo(token, studentIdNo);
+      const { student } = await api.lookupStudentByIdNo(token, idNo);
+      setStudentName(student.name);
+      setStudentIdNo(student.studentId);
+      setStudentLookupError('');
       if (studentAlreadyHasBookOnPage(activeIssues, student.studentId)) {
-        Alert.alert(
-          'Issue not allowed',
-          'Ye book is student ke paas pehle se issued hai. Ek hi book dobara issue nahi ho sakti.',
-        );
+        const msg =
+          'Ye book is student ke paas pehle se issued hai. Ek hi book dobara issue nahi ho sakti.';
+        setIssueError(msg);
+        showAlert('Issue not allowed', msg);
         return;
       }
       const { issues: allActive } = await api.getActiveIssues(token);
       const limitErr = validateStudentCanIssue(allActive, student.studentId, id);
       if (limitErr) {
-        Alert.alert('Issue not allowed', limitErr);
+        setIssueError(limitErr);
+        showAlert('Issue not allowed', limitErr);
         return;
       }
       await api.issueBook(token, {
@@ -271,11 +277,14 @@ export default function BookDetailScreen() {
       setStudentIdNo('');
       setStudentName('');
       setStudentLookupError('');
+      setIssueError(null);
       await load();
       await refresh();
-      Alert.alert('Issued', `Book ${student.name} (${student.studentId}) ko di gayi`);
+      showAlert('Issued', `Book ${student.name} (${student.studentId}) ko di gayi`);
     } catch (e) {
-      Alert.alert('Issue failed', e instanceof Error ? e.message : 'Could not issue book');
+      const msg = e instanceof Error ? e.message : 'Could not issue book';
+      setIssueError(msg);
+      showAlert('Issue failed', msg);
     }
   };
 
@@ -321,7 +330,7 @@ export default function BookDetailScreen() {
         />
       </LinearGradient>
 
-      {isTeacher ? (
+      {isStaff ? (
         <View style={styles.editCard}>
           <Pressable style={styles.editToggle} onPress={() => (editing ? setEditing(false) : startEdit())}>
             <ThemedText style={styles.editToggleText}>
@@ -403,7 +412,7 @@ export default function BookDetailScreen() {
         <DetailRow label="Currently Issued" value={String(book.issuedCount)} />
       </View>
 
-      {isTeacher && activeIssues.length > 0 ? (
+      {isStaff && activeIssues.length > 0 ? (
         <View style={styles.issuesCard}>
           <ThemedText style={styles.sectionTitle}>Students with this book</ThemedText>
           {activeIssues.map((issue) => (
@@ -418,7 +427,7 @@ export default function BookDetailScreen() {
             </View>
           ))}
         </View>
-      ) : !isTeacher && book.status === 'issued_out' ? (
+      ) : !isStaff && book.status === 'issued_out' ? (
         <View style={styles.publicNote}>
           <ThemedText style={styles.publicNoteText}>
             Ye book abhi library mein nahi hai — kisi student ne issue karayi hai. (Student ID sirf
@@ -427,7 +436,7 @@ export default function BookDetailScreen() {
         </View>
       ) : null}
 
-      {isTeacher && book.availableCount > 0 ? (
+      {isStaff && book.availableCount > 0 ? (
         <View style={styles.issueForm}>
           <ThemedText style={styles.sectionTitle}>Issue to Student</ThemedText>
           <ThemedText style={styles.issueHint}>
@@ -441,6 +450,7 @@ export default function BookDetailScreen() {
               setStudentIdNo(v);
               setStudentName('');
               setStudentLookupError('');
+              setIssueError(null);
             }}
             onBlur={lookupStudent}
             autoCapitalize="characters"
@@ -452,13 +462,14 @@ export default function BookDetailScreen() {
           ) : studentLookupError ? (
             <ThemedText style={styles.issueErr}>{studentLookupError}</ThemedText>
           ) : null}
+          {issueError ? <ThemedText style={styles.issueErr}>{issueError}</ThemedText> : null}
           <Pressable style={styles.issueBtn} onPress={issueToStudent}>
             <ThemedText style={styles.issueBtnText}>Issue Book</ThemedText>
           </Pressable>
         </View>
       ) : null}
 
-      {!isTeacher ? (
+      {!isStaff ? (
         <Pressable style={styles.loginBtn} onPress={() => router.push('/welcome')}>
           <ThemedText style={styles.loginBtnText}>Sign in (Teacher)</ThemedText>
         </Pressable>

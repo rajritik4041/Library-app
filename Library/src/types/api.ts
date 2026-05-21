@@ -37,6 +37,15 @@ export type ApiIssue = {
 export type TeacherSession = {
   teacherId: string;
   name: string;
+  mobile?: string;
+  department?: string;
+  inCharge?: string;
+  createdAt?: string;
+};
+
+export type DeanSession = {
+  deanId: string;
+  name: string;
 };
 
 export type StudentSession = {
@@ -52,7 +61,7 @@ export type StudentSession = {
   department: string;
 };
 
-export type AuthRole = 'teacher' | 'student';
+export type AuthRole = 'teacher' | 'student' | 'dean';
 
 export type ApiStudent = StudentSession & {
   createdAt?: string;

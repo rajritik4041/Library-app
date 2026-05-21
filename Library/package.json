@@ -24,6 +24,7 @@
     "server": "npm run start --prefix server",
     "sync-backend": "node ../scripts/sync-backend.js",
     "dev:all": "node ./scripts/import-books.js && npm run server",
+    "dev": "node ./scripts/import-books.js && concurrently -k -n api,app -c green,cyan \"npm run server\" \"wait-on http://127.0.0.1:3001/api/health && expo start\"",
     "lint": "expo lint"
   },
   "dependencies": {

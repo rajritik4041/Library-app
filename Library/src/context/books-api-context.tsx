@@ -72,7 +72,7 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
       if (mode !== 'mongodb') {
         setApiOnline(false);
         setError(
-          `MongoDB server ready nahi (${API_URL}). Render par MONGODB_URI set karein.`,
+          `MongoDB mode nahi (${API_URL}). server/.env mein MONGODB_URI set karein, phir: npm run server`,
         );
         const cached = getLocalApiBooks().map(enrichApiBook);
         if (cached.length > 0) {
@@ -106,7 +106,7 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
         msg.includes('Aborted');
       setError(
         isNetwork
-          ? `MongoDB server tak nahi pahunch rahe (${API_URL}). Internet check karein; retry karein.`
+          ? `API server band hai (${API_URL}). Terminal: cd Library && npm run dev  (ya alag: npm run server)`
           : msg,
       );
       const cached = getLocalApiBooks().map(enrichApiBook);

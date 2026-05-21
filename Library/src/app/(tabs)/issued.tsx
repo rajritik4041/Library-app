@@ -15,7 +15,7 @@ import { api } from '@/services/api';
 import type { ApiIssue } from '@/types/api';
 
 export default function IssuedScreen() {
-  const { isTeacher, isStudent, token, student, logout } = useAuth();
+  const { isStaff, isStudent, token, student, logout } = useAuth();
   const router = useRouter();
   const [issues, setIssues] = useState<ApiIssue[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -145,7 +145,7 @@ export default function IssuedScreen() {
     [issues, searchQuery],
   );
 
-  if (!isTeacher && !isStudent) {
+  if (!isStaff && !isStudent) {
     return (
       <ScrollView contentContainerStyle={styles.centered}>
         <ThemedText style={styles.title}>My Books / Issued</ThemedText>
@@ -255,7 +255,7 @@ export default function IssuedScreen() {
             <ThemedText style={styles.meta}>
               Issued: {new Date(issue.issuedAt).toLocaleString('en-IN')}
             </ThemedText>
-            {isTeacher ? (
+            {isStaff ? (
               <Pressable style={styles.returnBtn} onPress={() => setReturnIssue(issue)}>
                 <ThemedText style={styles.returnText}>Mark Returned</ThemedText>
               </Pressable>

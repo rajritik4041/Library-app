@@ -15,7 +15,7 @@ import { confirmAsync } from '@/lib/confirm';
 export default function EditStudentScreen() {
   const params = useLocalSearchParams<{ key?: string }>();
   const lookupKey = (Array.isArray(params.key) ? params.key[0] : params.key)?.trim() || '';
-  const { token, isTeacher } = useAuth();
+  const { token, isStaff } = useAuth();
   const router = useRouter();
   const { styles: FormStyles, colors: FormColors } = useFormStyles();
   const styles = useThemedStyles((c) =>
@@ -87,10 +87,10 @@ export default function EditStudentScreen() {
       goTeacher();
       return;
     }
-    if (isTeacher && token) load();
-  }, [isTeacher, token, lookupKey, load]);
+    if (isStaff && token) load();
+  }, [isStaff, token, lookupKey, load]);
 
-  if (!isTeacher || !token) {
+  if (!isStaff || !token) {
     return (
       <ScrollView contentContainerStyle={FormStyles.pageCentered}>
         <ThemedText style={FormStyles.bodyText}>Teacher login required</ThemedText>
