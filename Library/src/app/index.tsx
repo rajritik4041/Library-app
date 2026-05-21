@@ -19,7 +19,7 @@ import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 export default function CollegeHomeScreen() {
   const router = useRouter();
-  const { isTeacher, isStudent, teacher, student } = useAuth();
+  const { isTeacher, isDean, isStudent, teacher, dean, student } = useAuth();
   const colors = useLibraryColors();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
@@ -153,6 +153,10 @@ export default function CollegeHomeScreen() {
   );
 
   const openLibrary = () => {
+    if (isDean) {
+      router.replace('/(tabs)/dean');
+      return;
+    }
     if (isTeacher) {
       router.replace('/(tabs)/teacher');
       return;
@@ -224,15 +228,17 @@ export default function CollegeHomeScreen() {
 
       <Pressable style={styles.libraryBtn} onPress={openLibrary}>
         <ThemedText style={styles.libraryBtnText}>
-          {isTeacher
-            ? `Open Library Panel (${teacher?.teacherId})`
-            : isStudent
-              ? `My Library (${student?.userId ?? student?.studentId})`
-              : `Enter ${COLLEGE.libraryName}`}
+          {isDean
+            ? `Dean Panel (${dean?.deanId})`
+            : isTeacher
+              ? `Open Library Panel (${teacher?.teacherId})`
+              : isStudent
+                ? `My Library (${student?.userId ?? student?.studentId})`
+                : `Enter ${COLLEGE.libraryName}`}
         </ThemedText>
       </Pressable>
 
-      {!isTeacher && !isStudent ? (
+      {!isTeacher && !isDean && !isStudent ? (
         <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/(tabs)')}>
           <ThemedText style={styles.secondaryBtnText}>Browse books without login</ThemedText>
         </Pressable>

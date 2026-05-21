@@ -26,6 +26,7 @@ const NAV_ITEMS: { name: string; href: Href; label: string }[] = [
   { name: 'index', href: '/(tabs)', label: 'Home' },
   { name: 'books', href: '/books', label: 'Books' },
   { name: 'issued', href: '/issued', label: 'Issued' },
+  { name: 'dean', href: '/dean', label: 'Dean' },
   { name: 'teacher', href: '/teacher', label: 'Teacher' },
   { name: 'history', href: '/history', label: 'History' },
   { name: 'departments', href: '/departments', label: 'Depts' },
@@ -34,7 +35,12 @@ const NAV_ITEMS: { name: string; href: Href; label: string }[] = [
 
 export default function AppTabs() {
   const insets = useSafeAreaInsets();
-  const { isTeacher, isStudent, teacher, student, logout } = useAuth();
+  const { isStaff, isDean, isTeacher, isStudent, teacher, dean, student, logout } = useAuth();
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (item.name === 'dean') return isDean;
+    if (item.name === 'teacher' || item.name === 'history') return isStaff;
+    return true;
+  });
   const router = useRouter();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
@@ -130,10 +136,14 @@ export default function AppTabs() {
           </View>
           <View style={styles.headerActions}>
             <ThemeToggle onDark compact />
-            {isTeacher || isStudent ? (
+            {isStaff || isStudent ? (
               <Pressable onPress={logout} style={styles.authBtn}>
                 <ThemedText style={styles.authBtnText}>
-                  {isTeacher ? teacher?.teacherId : student?.userId} · Logout
+                  {isDean
+                    ? `${dean?.deanId} · Logout`
+                    : isTeacher
+                      ? `${teacher?.teacherId} · Logout`
+                      : `${student?.userId} · Logout`}
                 </ThemedText>
               </Pressable>
             ) : (
@@ -151,7 +161,7 @@ export default function AppTabs() {
         </View>
         <TabList asChild>
           <CustomTabList styles={styles} paddingBottom={Math.max(insets.bottom, Spacing.two)}>
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <TabTrigger key={item.name} name={item.name} href={item.href} asChild>
                 <TabButton styles={styles}>{item.label}</TabButton>
               </TabTrigger>

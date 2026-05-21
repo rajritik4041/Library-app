@@ -7,6 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
+    "prestart": "node scripts/ensure-env.js",
+    "predev": "node scripts/ensure-env.js",
     "start": "node index.js",
     "dev": "node --watch index.js",
     "seed": "node seed.js",

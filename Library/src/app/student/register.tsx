@@ -11,7 +11,7 @@ import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
 
 export default function RegisterStudentScreen() {
-  const { token, isTeacher } = useAuth();
+  const { token, isStaff } = useAuth();
   const router = useRouter();
   const { styles: FormStyles, colors: FormColors } = useFormStyles();
   const styles = useThemedStyles((c) =>
@@ -39,7 +39,7 @@ export default function RegisterStudentScreen() {
   const [department, setDepartment] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (!isTeacher || !token) {
+  if (!isStaff || !token) {
     return (
       <ScrollView contentContainerStyle={FormStyles.pageCentered}>
         <ThemedText style={FormStyles.bodyText}>Teacher login required</ThemedText>

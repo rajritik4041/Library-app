@@ -14,7 +14,7 @@ import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { isLoading, isTeacher, isStudent } = useAuth();
+  const { isLoading, isTeacher, isDean, isStudent } = useAuth();
   const colors = useLibraryColors();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
@@ -88,6 +88,7 @@ export default function WelcomeScreen() {
       },
       studentIcon: { backgroundColor: c.accentSoft },
       teacherIcon: { backgroundColor: c.goldMuted },
+      deanIcon: { backgroundColor: '#e0e7ff' },
       roleEmoji: { fontSize: 28 },
       roleBody: { flex: 1, gap: 4 },
       roleTitle: { fontSize: 18, fontWeight: '800', color: c.ink },
@@ -106,9 +107,10 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (isTeacher) router.replace('/(tabs)/teacher');
+    if (isDean) router.replace('/(tabs)/dean');
+    else if (isTeacher) router.replace('/(tabs)/teacher');
     else if (isStudent) router.replace('/(tabs)/issued');
-  }, [isLoading, isTeacher, isStudent, router]);
+  }, [isLoading, isDean, isTeacher, isStudent, router]);
 
   if (isLoading) {
     return (
@@ -131,7 +133,7 @@ export default function WelcomeScreen() {
         <ThemedText style={styles.heroBadge}>{COLLEGE.libraryName}</ThemedText>
         <ThemedText style={styles.heroTitle}>Sign in</ThemedText>
         <ThemedText style={styles.heroSubtitle}>
-          Choose Student or Teacher to access library services
+          Student, Teacher, ya Dean — apna role choose karein
         </ThemedText>
       </LinearGradient>
 
@@ -161,7 +163,22 @@ export default function WelcomeScreen() {
         <View style={styles.roleBody}>
           <ThemedText style={styles.roleTitle}>Teacher</ThemedText>
           <ThemedText style={styles.roleDesc}>
-            Manage books, register students, issue and return books
+            Books issue/return, students register — apni profile khud edit nahi
+          </ThemedText>
+        </View>
+        <ThemedText style={styles.roleArrow}>→</ThemedText>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.roleCard, pressed && styles.roleCardPressed]}
+        onPress={() => router.push('/login-dean')}>
+        <View style={[styles.roleIcon, styles.deanIcon]}>
+          <ThemedText style={styles.roleEmoji}>🎓</ThemedText>
+        </View>
+        <View style={styles.roleBody}>
+          <ThemedText style={styles.roleTitle}>Dean</ThemedText>
+          <ThemedText style={styles.roleDesc}>
+            Teacher IDs banayein, poori library par full access
           </ThemedText>
         </View>
         <ThemedText style={styles.roleArrow}>→</ThemedText>

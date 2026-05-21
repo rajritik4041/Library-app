@@ -24,6 +24,7 @@ function RootStack() {
               <Stack.Screen name="welcome" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="login-teacher" options={{ presentation: 'card' }} />
+              <Stack.Screen name="login-dean" options={{ presentation: 'card' }} />
               <Stack.Screen name="login-student" options={{ presentation: 'card' }} />
               <Stack.Screen name="login" options={{ presentation: 'card' }} />
               <Stack.Screen name="edit-student" options={{ presentation: 'card' }} />
