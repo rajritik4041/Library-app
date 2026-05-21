@@ -159,7 +159,7 @@ export default function IssuedScreen() {
           <ThemedText style={styles.btnOutlineText}>Teacher Login</ThemedText>
         </Pressable>
         <Pressable onPress={() => router.replace('/welcome')}>
-          <ThemedText style={styles.link}>← Library sign in</ThemedText>
+          <ThemedText style={styles.link}>← Library sign in </ThemedText>
         </Pressable>
       </ScrollView>
     );
