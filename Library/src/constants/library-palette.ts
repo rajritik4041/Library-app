@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 /** Semantic library palette — light & dark (system theme). */
 export type LibraryColorScheme = {
   navy: string;
@@ -92,6 +94,28 @@ export const libraryPaletteDark: LibraryColorScheme = {
 /** @deprecated Use useLibraryColors() — kept for gradual migration */
 export const LibraryColors = libraryPaletteLight;
 
+/** Desktop/web (Electron) — slightly richer contrast so UI matches Android depth. */
+function webPaletteTweaks(base: LibraryColorScheme, scheme: 'light' | 'dark'): LibraryColorScheme {
+  if (Platform.OS !== 'web') return base;
+  if (scheme === 'dark') {
+    return {
+      ...base,
+      border: '#324d70',
+      inkMuted: '#a8b8cc',
+      card: '#172a45',
+    };
+  }
+  return {
+    ...base,
+    border: '#b0c2d8',
+    inkMuted: '#4a5d72',
+    surface: '#e8eef6',
+    surfaceAlt: '#dce6f2',
+  };
+}
+
 export function getLibraryPalette(scheme: 'light' | 'dark' | null | undefined): LibraryColorScheme {
-  return scheme === 'dark' ? libraryPaletteDark : libraryPaletteLight;
+  const resolved = scheme === 'dark' ? 'dark' : 'light';
+  const base = resolved === 'dark' ? libraryPaletteDark : libraryPaletteLight;
+  return webPaletteTweaks(base, resolved);
 }

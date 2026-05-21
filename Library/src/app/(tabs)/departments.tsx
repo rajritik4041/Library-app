@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { PageHeader } from '@/components/library/page-header';
@@ -16,6 +16,13 @@ export default function DepartmentsScreen() {
   const { departments, booksByDepartment, stats, racks, loading, error, apiOnline, refresh } =
     useBooksApi();
   const colors = useLibraryColors();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       centered: {
@@ -90,7 +97,7 @@ export default function DepartmentsScreen() {
   return (
     <ScreenShell>
       <PageHeader
-        badge={apiOnline ? 'MongoDB' : 'Offline'}
+        // badge={apiOnline ? 'MongoDB' : 'Offline'}
         title="Departments"
         subtitle="Books grouped by academic department — tap to open filtered search."
       />

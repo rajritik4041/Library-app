@@ -1,10 +1,12 @@
+/** Department codes aligned with MCAET — https://mcaet.vercel.app/ */
 export const DEPARTMENT_LABELS: Record<string, string> = {
-  FMPE: 'Fluid Mechanics & Power Engineering',
-  PFE: 'Production & Industrial Engineering',
+  FMPE: 'Farm Machinery & Power Engineering',
+  PFE: 'Processing & Food Engineering',
   SWCE: 'Soil & Water Conservation Engineering',
-  IDE: 'Instrumentation & Data Engineering',
+  IDE: 'Irrigation & Drainage Engineering',
   REE: 'Renewable Energy Engineering',
-  BEAS: 'Biological & Agricultural Sciences',
+  BEAS: 'Basic Engineering & Applied Sciences',
+  AE: 'Agricultural Engineering',
   ME: 'Mechanical Engineering',
   CSE: 'Computer Science & Engineering',
   CE: 'Civil Engineering',

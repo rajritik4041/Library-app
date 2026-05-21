@@ -26,3 +26,14 @@ services:
         value: teacher123
       - key: DEFAULT_TEACHER_NAME
         value: Library Teacher
+      # Google Sheet ↔ MongoDB (same as Library/server/.env)
+      - key: GOOGLE_SHEET_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        sync: false
+      - key: GOOGLE_PRIVATE_KEY
+        sync: false
+      - key: GOOGLE_SHEET_DATA_START_ROW
+        value: "3"
+      - key: SHEET_SYNC_INTERVAL_MS
+        value: "45000"

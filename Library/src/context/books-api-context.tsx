@@ -19,6 +19,7 @@ import {
   booksInDepartment,
   type LibraryStats,
 } from '@/lib/api-books';
+import { enrichApiBook } from '@/lib/book-catalog-fields';
 import { api } from '@/services/api';
 import type { ApiBook } from '@/types/api';
 
@@ -73,7 +74,7 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
         setError(
           `MongoDB server ready nahi (${API_URL}). Render par MONGODB_URI set karein.`,
         );
-        const cached = getLocalApiBooks();
+        const cached = getLocalApiBooks().map(enrichApiBook);
         if (cached.length > 0) {
           setBooks(cached);
           setDataSource('offline-cache');
@@ -89,7 +90,7 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
         api.getStats().catch(() => null),
       ]);
 
-      setBooks(remote);
+      setBooks(remote.map(enrichApiBook));
       setApiOnline(true);
       setDataSource('mongodb');
       setError(null);
@@ -108,7 +109,7 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
           ? `MongoDB server tak nahi pahunch rahe (${API_URL}). Internet check karein; retry karein.`
           : msg,
       );
-      const cached = getLocalApiBooks();
+      const cached = getLocalApiBooks().map(enrichApiBook);
       if (cached.length > 0) {
         setBooks(cached);
         setDataSource('offline-cache');

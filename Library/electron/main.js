@@ -81,7 +81,7 @@ function createWindow(loadUrl) {
     height: 840,
     minWidth: 900,
     minHeight: 600,
-    title: 'EJ MCAET Library',
+    title: 'MCAET Library',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,

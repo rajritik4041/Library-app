@@ -3,6 +3,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { assertStudentCanIssueInFile } from './issue-limits.js';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 
@@ -383,6 +384,8 @@ export function filePostIssue({ bookId, studentId, studentName, teacherId, teach
   if (!b) {
     throw new Error('Book not found');
   }
+  assertStudentCanIssueInFile(issues, sid, bookId);
+
   const issued = issuedCountForCatalogId(bookId, issues);
   const copies = Number(b.copies) || 1;
   if (issued >= copies) {
@@ -451,6 +454,50 @@ export function fileAddBook(body) {
   };
   custom.push(book);
   fs.writeFileSync(CUSTOM_BOOKS_PATH, JSON.stringify(custom, null, 2));
+  return enrichFileBook(book, readIssues());
+}
+
+function applyFileBookFields(book, fields) {
+  if (fields.title?.trim()) book.title = fields.title.trim();
+  if (fields.authors !== undefined) book.authors = String(fields.authors).trim();
+  if (fields.publisher !== undefined) book.publisher = String(fields.publisher).trim();
+  if (fields.department !== undefined) {
+    book.department = String(fields.department).trim() || 'MISC';
+  }
+  if (fields.subject !== undefined) {
+    book.subject = String(fields.subject).trim() || 'MISC';
+  }
+  if (fields.rackNo !== undefined) book.rackNo = String(fields.rackNo);
+  if (fields.copies !== undefined) book.copies = Math.max(1, Number(fields.copies) || 1);
+  if (fields.serialNo !== undefined && Number(fields.serialNo) > 0) {
+    book.serialNo = Number(fields.serialNo);
+  }
+}
+
+export function fileUpdateBook(catalogId, fields) {
+  ensureDataDir();
+  const key = String(catalogId);
+  const custom = JSON.parse(fs.readFileSync(CUSTOM_BOOKS_PATH, 'utf8'));
+  const customIdx = custom.findIndex((b) => String(b.id) === key);
+  if (customIdx !== -1) {
+    const book = custom[customIdx];
+    applyFileBookFields(book, fields);
+    custom[customIdx] = book;
+    fs.writeFileSync(CUSTOM_BOOKS_PATH, JSON.stringify(custom, null, 2));
+    return enrichFileBook(book, readIssues());
+  }
+
+  const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+  const books = catalog.books || [];
+  const catIdx = books.findIndex((b) => String(b.id) === key);
+  if (catIdx === -1) {
+    throw new Error('Book not found');
+  }
+  const book = books[catIdx];
+  applyFileBookFields(book, fields);
+  books[catIdx] = book;
+  catalog.books = books;
+  fs.writeFileSync(CATALOG_PATH, JSON.stringify(catalog, null, 2));
   return enrichFileBook(book, readIssues());
 }
 

@@ -1,14 +1,13 @@
 /** @type {import('expo/config').ExpoConfig} */
 export default ({ config }) => {
-  const apiUrl =
-    process.env.EXPO_PUBLIC_API_URL?.trim() ||
-    'https://library-app-2-e5ly.onrender.com';
+  // Sirf explicit build/env par bake karo — dev mein resolveApiUrl() localhost use karega
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
   return {
     ...config,
     extra: {
       ...config.extra,
-      apiUrl: apiUrl.replace(/\/$/, ''),
+      ...(apiUrl ? { apiUrl: apiUrl.replace(/\/$/, '') } : {}),
     },
   };
 };

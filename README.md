@@ -1,4 +1,6 @@
-# EJ MCAET Library App
+# MCAET Library App
+
+Official college: [Mahamaya College of Agricultural Engineering & Technology](https://mcaet.vercel.app/) (MCAET), Akbarpur, Ambedkar Nagar.
 
 ## Folder structure
 

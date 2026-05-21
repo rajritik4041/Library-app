@@ -1,7 +1,16 @@
+html,
+body,
+#root {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 body {
   background: linear-gradient(165deg, #eef3f9 0%, #e2eaf4 45%, #eef3f9 100%);
   min-height: 100vh;
   color: #0a2342;
+  font-family: var(--font-display);
 }
 
 @media (prefers-color-scheme: dark) {

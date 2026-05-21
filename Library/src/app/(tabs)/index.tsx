@@ -8,10 +8,12 @@ import { ScreenShell } from '@/components/library/screen-shell';
 import { StatCard } from '@/components/library/stat-card';
 import { ThemedText } from '@/components/themed-text';
 import { useBooksApi } from '@/context/books-api-context';
+import { COLLEGE } from '@/constants/college-branding';
 import { getDepartmentLabel } from '@/constants/departments';
 import { Radius, Spacing } from '@/constants/theme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { cardBorder, libraryElevation, webTypography } from '@/lib/platform-styles';
 
 const QUICK_LINKS = [
   { href: '/books' as const, title: 'Search Books', desc: 'Title, author, publisher', emoji: '📚' },
@@ -63,11 +65,7 @@ export default function HomeScreen() {
         borderRadius: Radius.xl,
         padding: Spacing.four,
         gap: Spacing.two,
-        shadowColor: c.navy,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-        elevation: 8,
+        ...libraryElevation(c.shadow, 'hero'),
       },
       heroBadge: {
         alignSelf: 'flex-start',
@@ -102,10 +100,9 @@ export default function HomeScreen() {
         backgroundColor: c.card,
         borderRadius: Radius.lg,
         padding: Spacing.four,
-        borderWidth: 1,
-        borderColor: c.border,
+        ...cardBorder(c.border),
         gap: Spacing.three,
-        elevation: 3,
+        ...libraryElevation(c.shadow, 'card'),
       },
       rackSearchTitle: {
         fontSize: 16,
@@ -128,6 +125,7 @@ export default function HomeScreen() {
         borderColor: c.border,
         color: c.inputText,
         outlineStyle: 'none',
+        ...webTypography,
       } as object,
       rackBtn: {
         backgroundColor: c.accent,
@@ -179,9 +177,8 @@ export default function HomeScreen() {
         backgroundColor: c.card,
         borderRadius: Radius.lg,
         padding: Spacing.three,
-        borderWidth: 1,
-        borderColor: c.border,
-        elevation: 2,
+        ...cardBorder(c.border),
+        ...libraryElevation(c.shadow, 'raised'),
       },
       linkCardPressed: { borderColor: c.accent },
       linkIconWrap: {
@@ -250,10 +247,10 @@ export default function HomeScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}>
-        <View style={styles.heroBadge}>
+        {/* <View style={styles.heroBadge}>
           <ThemedText style={styles.heroBadgeText}>{sourceLabel}</ThemedText>
-        </View>
-        <ThemedText style={styles.heroTitle}>Central Library</ThemedText>
+        </View> */}
+        <ThemedText style={styles.heroTitle}>{COLLEGE.libraryName}</ThemedText>
         <ThemedText style={styles.heroSubtitle}>
           {stats.totalTitles} books · {stats.availableCopies} copies in library · Rack search
         </ThemedText>
@@ -304,7 +301,7 @@ export default function HomeScreen() {
       </View>
 
       <Pressable style={styles.collegeLink} onPress={() => router.replace('/')}>
-        <ThemedText style={styles.collegeLinkText}>← MCAET College Home</ThemedText>
+        <ThemedText style={styles.collegeLinkText}>← {COLLEGE.shortName} College Home</ThemedText>
       </Pressable>
 
       <Pressable style={styles.accountBar} onPress={() => router.push('/welcome')}>

@@ -4,6 +4,7 @@ import { Platform, StyleSheet } from 'react-native';
 import type { LibraryColorScheme } from '@/constants/library-palette';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
+import { cardBorder, libraryElevation, webTypography } from '@/lib/platform-styles';
 
 function createFormStyles(c: LibraryColorScheme) {
   return StyleSheet.create({
@@ -33,8 +34,8 @@ function createFormStyles(c: LibraryColorScheme) {
       borderRadius: Radius.lg,
       padding: Spacing.four,
       gap: Spacing.two,
-      borderWidth: 1,
-      borderColor: c.border,
+      ...cardBorder(c.border),
+      ...libraryElevation(c.shadow, 'card'),
       alignSelf: 'center',
     },
     cardTitle: {
@@ -59,6 +60,7 @@ function createFormStyles(c: LibraryColorScheme) {
       color: c.inputText,
       backgroundColor: c.inputBg,
       outlineStyle: 'none',
+      ...webTypography,
       ...Platform.select({ web: { outlineWidth: 0 } }),
     } as object,
     inputDisabled: {

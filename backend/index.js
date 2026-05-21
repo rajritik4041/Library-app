@@ -7,8 +7,15 @@ import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dns from "dns";
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 import * as fileStore from './file-store.js';
+import * as sheetSync from './google-sheets-sync.js';
+import {
+  assertStudentCanIssueInMongo,
+  httpStatusFromIssueError,
+} from './issue-limits.js';
 
 dotenv.config();
 
@@ -178,6 +185,17 @@ async function getActiveIssueCount(bookId) {
   return Issue.countDocuments({ book: bookId, status: 'issued' });
 }
 
+function formatSheetWarning(sheetPush) {
+  const email =
+    sheetPush.serviceAccountEmail ||
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() ||
+    'service account email';
+  return (
+    sheetPush.hint ||
+    `MongoDB mein save ho gaya, par Excel update fail. Google Sheet kholo → Share → ${email} ko Editor banaein.`
+  );
+}
+
 async function requireRegisteredStudentByIdNo(studentIdInput) {
   const student = await findStudentByIdNo(studentIdInput);
   if (!student) {
@@ -207,8 +225,73 @@ async function findBookByCatalogOrSerial(bookIdInput) {
   if (!book && /^\d+$/.test(raw)) {
     book = await Book.findOne({ serialNo: Number(raw) });
   }
+  if (!book && mongoose.Types.ObjectId.isValid(raw)) {
+    book = await Book.findById(raw);
+  }
   if (!book) return null;
   return { catalogId: book.catalogId, book };
+}
+
+let catalogById;
+let catalogBySerial;
+
+function loadCatalogLookup() {
+  if (catalogBySerial) return;
+  catalogById = new Map();
+  catalogBySerial = new Map();
+  const candidates = [
+    path.join(__dirname, '..', 'src', 'data', 'catalog.json'),
+    path.join(__dirname, 'data', 'catalog.json'),
+  ];
+  const catalogPath = candidates.find((p) => fs.existsSync(p));
+  if (!catalogPath) return;
+  const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+  for (const b of catalog.books || []) {
+    catalogById.set(String(b.id), b);
+    catalogBySerial.set(Number(b.serialNo), b);
+  }
+}
+
+function catalogEntry(doc) {
+  loadCatalogLookup();
+  if (!catalogBySerial) return null;
+  return (
+    catalogById.get(String(doc.catalogId)) ||
+    catalogBySerial.get(Number(doc.serialNo)) ||
+    null
+  );
+}
+
+function resolveRackNo(doc) {
+  const direct = String(doc.rackNo ?? '').trim();
+  if (direct) return direct;
+  const hit = catalogEntry(doc);
+  return String(hit?.rackNo ?? '').trim();
+}
+
+function resolvePublisher(doc) {
+  const direct = String(doc.publisher ?? '').trim();
+  if (direct) return direct;
+  const hit = catalogEntry(doc);
+  return String(hit?.publisher ?? '').trim();
+}
+
+function resolveAuthors(doc) {
+  const direct = String(doc.authors ?? '').trim();
+  if (direct) return direct;
+  const hit = catalogEntry(doc);
+  return String(hit?.authors ?? '').trim();
+}
+
+async function verifyTeacherPassword(teacherId, password) {
+  if (!password) return false;
+  if (USE_FILE_MODE) {
+    const row = await fileStore.verifyFileTeacher(teacherId, password, process.env);
+    return Boolean(row);
+  }
+  const teacher = await Teacher.findOne({ teacherId: String(teacherId).toUpperCase() });
+  if (!teacher) return false;
+  return bcrypt.compare(password, teacher.passwordHash);
 }
 
 async function enrichBook(book) {
@@ -218,10 +301,10 @@ async function enrichBook(book) {
     id: book.catalogId,
     mongoId: book._id.toString(),
     serialNo: book.serialNo,
-    rackNo: book.rackNo,
+    rackNo: resolveRackNo(book),
     title: book.title,
-    authors: book.authors,
-    publisher: book.publisher,
+    authors: resolveAuthors(book),
+    publisher: resolvePublisher(book),
     department: book.department,
     subject: book.subject,
     copies: book.copies,
@@ -701,7 +784,8 @@ app.post('/api/books', authTeacher, async (req, res) => {
     }
     const maxSerial = await Book.findOne().sort({ serialNo: -1 }).select('serialNo');
     const nextSerial = serialNo || (maxSerial?.serialNo || 0) + 1;
-    const catalogId = String(Date.now());
+    const catalogId = String(nextSerial);
+    sheetSync.noteMongoChanged();
     const book = await Book.create({
       catalogId,
       serialNo: nextSerial,
@@ -713,10 +797,75 @@ app.post('/api/books', authTeacher, async (req, res) => {
       rackNo: String(rackNo ?? ''),
       copies: Math.max(1, Number(copies) || 1),
     });
-    res.status(201).json({ book: await enrichBook(book) });
+    const sheetPush = await sheetSync.pushAfterMongoCrud(Book);
+    const sheetWarning = sheetPush.ok
+      ? undefined
+      : formatSheetWarning(sheetPush);
+    if (sheetWarning) console.warn('Sheet push after add:', sheetPush.error);
+    res.status(201).json({ book: await enrichBook(book), sheetWarning });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Failed to add book' });
+  }
+});
+
+app.put('/api/books/:catalogId', authTeacher, async (req, res) => {
+  try {
+    const catalogKey = decodeURIComponent(String(req.params.catalogId || ''));
+    const { title, authors, publisher, department, subject, rackNo, copies, serialNo } = req.body;
+    if (USE_FILE_MODE) {
+      const found = await findBookByCatalogOrSerial(catalogKey);
+      if (!found) {
+        return res.status(404).json({ error: 'Book not found' });
+      }
+      const book = fileStore.fileUpdateBook(found.catalogId, {
+        title,
+        authors,
+        publisher,
+        department,
+        subject,
+        rackNo,
+        copies,
+        serialNo,
+      });
+      return res.json({ book });
+    }
+    const found = await findBookByCatalogOrSerial(catalogKey);
+    if (!found) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    const book = await Book.findOne({ catalogId: found.catalogId });
+    if (!book) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+    if (title?.trim()) book.title = title.trim();
+    if (authors !== undefined) book.authors = String(authors).trim();
+    if (publisher !== undefined) book.publisher = String(publisher).trim();
+    if (department !== undefined) book.department = String(department).trim() || 'MISC';
+    if (subject !== undefined) book.subject = String(subject).trim() || 'MISC';
+    if (rackNo !== undefined) book.rackNo = String(rackNo);
+    if (copies !== undefined) book.copies = Math.max(1, Number(copies) || 1);
+    if (serialNo !== undefined && Number(serialNo) > 0) {
+      const nextSerial = Number(serialNo);
+      const clash = await Book.findOne({
+        serialNo: nextSerial,
+        catalogId: { $ne: book.catalogId },
+      });
+      if (clash) {
+        return res.status(409).json({ error: `Serial ${nextSerial} already used by another book` });
+      }
+      book.serialNo = nextSerial;
+      book.catalogId = String(nextSerial);
+    }
+    sheetSync.noteMongoChanged();
+    await book.save();
+    const sheetPush = await sheetSync.pushAfterMongoCrud(Book);
+    const sheetWarning = sheetPush.ok ? undefined : formatSheetWarning(sheetPush);
+    if (sheetWarning) console.warn('Sheet push after edit:', sheetPush.error);
+    res.json({ book: await enrichBook(book), sheetWarning });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Failed to update book' });
   }
 });
 
@@ -743,8 +892,12 @@ app.delete('/api/books/:catalogId', authTeacher, async (req, res) => {
     if (active > 0) {
       return res.status(400).json({ error: 'Cannot delete: book has active issues. Return all copies first.' });
     }
+    sheetSync.noteMongoChanged();
     await Book.deleteOne({ _id: book._id });
-    res.json({ ok: true });
+    const sheetPush = await sheetSync.pushAfterMongoCrud(Book);
+    const sheetWarning = sheetPush.ok ? undefined : formatSheetWarning(sheetPush);
+    if (sheetWarning) console.warn('Sheet push after delete:', sheetPush.error);
+    res.json({ ok: true, sheetWarning });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Failed to delete book' });
@@ -772,7 +925,7 @@ app.get('/api/issues/mine', authStudent, async (req, res) => {
           ? {
               id: i.book.catalogId,
               title: i.book.title,
-              rackNo: i.book.rackNo,
+              rackNo: resolveRackNo(i.book),
               department: i.book.department,
             }
           : null,
@@ -798,7 +951,7 @@ function mapIssueHistoryRow(i, bookDoc) {
       ? {
           id: bookDoc.catalogId || bookDoc.id,
           title: bookDoc.title,
-          rackNo: bookDoc.rackNo,
+          rackNo: resolveRackNo(bookDoc),
           department: bookDoc.department,
         }
       : null,
@@ -846,7 +999,7 @@ app.get('/api/issues/active', authTeacher, async (_req, res) => {
           ? {
               id: i.book.catalogId,
               title: i.book.title,
-              rackNo: i.book.rackNo,
+              rackNo: resolveRackNo(i.book),
               department: i.book.department,
             }
           : null,
@@ -898,10 +1051,7 @@ app.post('/api/issues', authTeacher, async (req, res) => {
         book,
       });
     }
-    const book = await Book.findOne({ catalogId });
-    if (!book) {
-      return res.status(404).json({ error: 'Book not found' });
-    }
+    const book = await assertStudentCanIssueInMongo(Issue, Book, sid, catalogId);
     const issued = await getActiveIssueCount(book._id);
     if (issued >= book.copies) {
       return res.status(400).json({ error: 'No copies available in library' });
@@ -925,12 +1075,22 @@ app.post('/api/issues', authTeacher, async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message || 'Failed to issue book' });
+    res
+      .status(httpStatusFromIssueError(err))
+      .json({ error: err.message || 'Failed to issue book' });
   }
 });
 
 app.post('/api/issues/:issueId/return', authTeacher, async (req, res) => {
   try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: 'Teacher password required to confirm return' });
+    }
+    const passwordOk = await verifyTeacherPassword(req.teacher.teacherId, password);
+    if (!passwordOk) {
+      return res.status(401).json({ error: 'Wrong teacher password' });
+    }
     if (USE_FILE_MODE) {
       const { book } = fileStore.fileReturnIssue(req.params.issueId);
       return res.json({ ok: true, book });
@@ -973,8 +1133,53 @@ app.get('/api/stats', async (_req, res) => {
   }
 });
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, mode: USE_FILE_MODE ? 'file' : 'mongodb' });
+app.get('/api/health', async (_req, res) => {
+  const payload = { ok: true, mode: USE_FILE_MODE ? 'file' : 'mongodb' };
+  if (!USE_FILE_MODE) {
+    if (sheetSync.isSheetsSyncEnabled()) {
+      try {
+        payload.sync = await sheetSync.getSyncStatus(Book);
+      } catch (e) {
+        payload.sync = { enabled: true, error: e.message };
+      }
+    } else {
+      payload.sync = {
+        enabled: false,
+        sheetWriteOk: false,
+        hint:
+          'Render/.env par GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY set karein — tabhi Excel↔Mongo sync chalegi.',
+      };
+    }
+  }
+  res.json(payload);
+});
+
+app.get('/api/sync/status', async (_req, res) => {
+  if (USE_FILE_MODE) {
+    return res.json({ enabled: false, mode: 'file' });
+  }
+  try {
+    const status = await sheetSync.getSyncStatus(Book);
+    res.json(status);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/sync/reconcile', authTeacher, async (_req, res) => {
+  if (USE_FILE_MODE) {
+    return res.status(400).json({ error: 'Sync requires MongoDB mode' });
+  }
+  if (!sheetSync.isSheetsSyncEnabled()) {
+    return res.status(400).json({ error: 'Google Sheets not configured in .env' });
+  }
+  try {
+    const result = await sheetSync.reconcile(Book, getActiveIssueCount);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'Reconcile failed' });
+  }
 });
 
 app.post('/api/sync-catalog', authTeacher, async (_req, res) => {
@@ -1017,7 +1222,7 @@ app.post('/api/sync-catalog', authTeacher, async (_req, res) => {
 });
 
 async function start() {
-  const uri = process.env.MONGODB_URI;
+  const uri = process.env.MONGODB_URI ;
   const forceFile =
     process.env.USE_FILE_STORE === 'true' ||
     process.env.USE_FILE_STORE === '1' ||
@@ -1035,6 +1240,31 @@ async function start() {
       await seedTeacher();
       await migrateStudentUserIds();
       await seedFromCatalog();
+      if (sheetSync.isSheetsSyncEnabled()) {
+        try {
+          await sheetSync.bootstrapSyncHashes(Book);
+          const writeCheck = await sheetSync.verifySheetWriteAccess();
+          if (!writeCheck.ok) {
+            console.warn(
+              '⚠ Sheet WRITE blocked — app→Excel sync nahi chalega jab tak sheet share na ho:',
+              process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+              '(Editor)',
+              writeCheck.error,
+            );
+          }
+          const result = await sheetSync.reconcile(Book, getActiveIssueCount);
+          console.log(
+            `Initial sync: ${result.direction} | sheet=${result.sheetCount} mongo=${result.mongoCount} inSync=${result.inSync}`,
+          );
+          sheetSync.startSheetSyncLoop(
+            Book,
+            getActiveIssueCount,
+            Number(process.env.SHEET_SYNC_INTERVAL_MS || 30000),
+          );
+        } catch (e) {
+          console.warn('Google Sheets initial sync:', e.message);
+        }
+      }
     } catch (e) {
       console.warn('MongoDB connect failed → FILE mode:', e.message);
       USE_FILE_MODE = true;

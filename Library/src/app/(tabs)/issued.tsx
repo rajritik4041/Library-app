@@ -1,12 +1,16 @@
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { PageHeader } from '@/components/library/page-header';
+import { SearchBar } from '@/components/library/search-bar';
+import { TeacherReturnPasswordModal } from '@/components/library/teacher-return-password-modal';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { Radius, Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { resolveIssueBookRack } from '@/lib/book-catalog-fields';
+import { filterIssuesByQuery } from '@/lib/filter-issues';
 import { api } from '@/services/api';
 import type { ApiIssue } from '@/types/api';
 
@@ -14,7 +18,9 @@ export default function IssuedScreen() {
   const { isTeacher, isStudent, token, student, logout } = useAuth();
   const router = useRouter();
   const [issues, setIssues] = useState<ApiIssue[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [returnIssue, setReturnIssue] = useState<ApiIssue | null>(null);
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       scroll: { flex: 1, backgroundColor: c.surface },
@@ -122,16 +128,22 @@ export default function IssuedScreen() {
     return () => clearInterval(id);
   }, [load, token]);
 
-  const onReturn = async (issueId: string) => {
-    if (!token) return;
+  const onReturnConfirm = async (password: string) => {
+    if (!token || !returnIssue) return;
     try {
-      await api.returnBook(token, issueId);
+      await api.returnBook(token, returnIssue.id, password);
+      setReturnIssue(null);
       await load();
       Alert.alert('Success', 'Book returned to library');
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Return failed');
     }
   };
+
+  const filteredIssues = useMemo(
+    () => filterIssuesByQuery(issues, searchQuery),
+    [issues, searchQuery],
+  );
 
   if (!isTeacher && !isStudent) {
     return (
@@ -154,11 +166,18 @@ export default function IssuedScreen() {
   }
 
   const title = isStudent ? 'My Issued Books' : 'Issued Books';
+  const showing = searchQuery.trim() ? filteredIssues.length : issues.length;
   const subtitle = isStudent
     ? student
-      ? `${student.name} (${student.studentId}) · ${issues.length} book(s) with you`
+      ? `${student.name} (${student.studentId}) · ${showing} book(s) with you`
       : 'Books currently issued to you'
-    : `${issues.length} books with students`;
+    : searchQuery.trim()
+      ? `${showing} of ${issues.length} issued books`
+      : `${issues.length} books with students`;
+
+  const searchPlaceholder = isStudent
+    ? 'Book title, rack no., department...'
+    : 'Student ID No, name, book title, book ID, rack...';
 
   return (
     <ScrollView
@@ -195,12 +214,27 @@ export default function IssuedScreen() {
         </View>
       ) : null}
 
+      {issues.length > 0 ? (
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={searchPlaceholder}
+          resultCount={searchQuery.trim() ? filteredIssues.length : undefined}
+          resultUnit="record"
+          onClear={() => setSearchQuery('')}
+        />
+      ) : null}
+
       {issues.length === 0 ? (
         <ThemedText themeColor="textSecondary">
           {isStudent ? 'No books issued to you right now ✓' : 'All books are in the library ✓'}
         </ThemedText>
+      ) : filteredIssues.length === 0 ? (
+        <ThemedText themeColor="textSecondary">
+          Koi record nahi mila — ID No, naam ya book title check karein
+        </ThemedText>
       ) : (
-        issues.map((issue) => (
+        filteredIssues.map((issue) => (
           <View key={issue.id} style={styles.card}>
             <ThemedText style={styles.bookTitle}>{issue.book?.title ?? 'Book'}</ThemedText>
             {!isStudent ? (
@@ -215,13 +249,14 @@ export default function IssuedScreen() {
               </>
             ) : null}
             <ThemedText style={styles.meta}>
-              Rack {issue.book?.rackNo} · {issue.book?.department}
+              Book ID: {issue.book?.id ?? '—'} · Rack {resolveIssueBookRack(issue.book) || '—'} ·{' '}
+              {issue.book?.department}
             </ThemedText>
             <ThemedText style={styles.meta}>
               Issued: {new Date(issue.issuedAt).toLocaleString('en-IN')}
             </ThemedText>
             {isTeacher ? (
-              <Pressable style={styles.returnBtn} onPress={() => onReturn(issue.id)}>
+              <Pressable style={styles.returnBtn} onPress={() => setReturnIssue(issue)}>
                 <ThemedText style={styles.returnText}>Mark Returned</ThemedText>
               </Pressable>
             ) : (
@@ -236,6 +271,13 @@ export default function IssuedScreen() {
       <Pressable style={styles.logout} onPress={logout}>
         <ThemedText style={styles.logoutText}>Logout</ThemedText>
       </Pressable>
+
+      <TeacherReturnPasswordModal
+        visible={Boolean(returnIssue)}
+        bookTitle={returnIssue?.book?.title}
+        onCancel={() => setReturnIssue(null)}
+        onConfirm={onReturnConfirm}
+      />
     </ScrollView>
   );
 }

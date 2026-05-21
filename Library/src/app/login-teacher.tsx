@@ -70,7 +70,7 @@ export default function TeacherLoginScreen() {
         ]}
         onSubmit={onLogin}
         loading={loading}
-        hint="Default: T001 / teacher123"
+        // hint="Default: T001 / teacher123"
       />
 
       <Pressable onPress={() => router.replace('/welcome')}>
