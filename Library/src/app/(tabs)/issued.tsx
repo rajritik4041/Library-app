@@ -150,13 +150,13 @@ export default function IssuedScreen() {
       <ScrollView contentContainerStyle={styles.centered}>
         <ThemedText style={styles.title}>My Books / Issued</ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.sub}>
-          Students: sign in to see books issued to you. Teachers: sign in to manage returns.
+        Students: Sign in to view the books issued to you. Professors: Sign in to manage book returns.
         </ThemedText>
         <Pressable style={styles.btn} onPress={() => router.push('/login-student')}>
           <ThemedText style={styles.btnText}>Student Login</ThemedText>
         </Pressable>
         <Pressable style={[styles.btn, styles.btnOutline]} onPress={() => router.push('/login-teacher')}>
-          <ThemedText style={styles.btnOutlineText}>Teacher Login</ThemedText>
+          <ThemedText style={styles.btnOutlineText}>Professor Login</ThemedText>
         </Pressable>
         <Pressable onPress={() => router.replace('/welcome')}>
           <ThemedText style={styles.link}>← Library sign in </ThemedText>
@@ -184,7 +184,7 @@ export default function IssuedScreen() {
       style={styles.scroll}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
-      <PageHeader badge={isStudent ? 'Student' : 'Teacher'} title={title} subtitle={subtitle} />
+      <PageHeader badge={isStudent ? 'Student' : 'Professor'} title={title} subtitle={subtitle} />
 
       {isStudent && student ? (
         <View style={styles.profileCard}>

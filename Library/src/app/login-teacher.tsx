@@ -1,6 +1,87 @@
+// import { useRouter } from 'expo-router';
+// import React, { useState } from 'react';
+// import { Alert, Pressable, StyleSheet } from 'react-native';
+
+// import { LoginForm } from '@/components/auth/login-form';
+// import { PageHeader } from '@/components/library/page-header';
+// import { ScreenShell } from '@/components/library/screen-shell';
+// import { ThemedText } from '@/components/themed-text';
+// import { useAuth } from '@/context/auth-context';
+// import { Spacing } from '@/constants/theme';
+// import { useThemedStyles } from '@/hooks/use-themed-styles';
+
+// export default function TeacherLoginScreen() {
+//   const { loginTeacher } = useAuth();
+//   const router = useRouter();
+//   const [teacherId, setTeacherId] = useState('');
+//   const [password, setPassword] = useState('');
+//   const [loading, setLoading] = useState(false);
+//   const styles = useThemedStyles((c) =>
+//     StyleSheet.create({
+//       back: {
+//         color: c.accent,
+//         fontWeight: '600',
+//         textAlign: 'center',
+//         marginTop: Spacing.four,
+//       },
+//     }),
+//   );
+
+//   const onLogin = async () => {
+//     if (!teacherId.trim() || !password) {
+//       Alert.alert('Error', 'Enter Teacher ID and password');
+//       return;
+//     }
+//     setLoading(true);
+//     try {
+//       await loginTeacher(teacherId, password);
+//       router.replace('/(tabs)/teacher' as const);
+//     } catch (e) {
+//       Alert.alert('Login failed', e instanceof Error ? e.message : 'Try again');
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <ScreenShell centered>
+//       <PageHeader
+//         badge="Teacher"
+//         title="Teacher Login"
+//         subtitle="Sign in to manage books, register students, and handle issue/return"
+//       />
+
+//       <LoginForm
+//         fields={[
+//           {
+//             label: 'Teacher ID',
+//             value: teacherId,
+//             onChangeText: setTeacherId,
+//             placeholder: 'e.g. T001',
+//             autoCapitalize: 'characters',
+//           },
+//           {
+//             label: 'Password',
+//             value: password,
+//             onChangeText: setPassword,
+//             placeholder: 'Password',
+//             secure: true,
+//           },
+//         ]}
+//         onSubmit={onLogin}
+//         loading={loading}
+//         // hint="Default: T001 / teacher123"
+//       />
+
+//       <Pressable onPress={() => router.replace('/welcome')}>
+//         <ThemedText style={styles.back}>← Back to role selection</ThemedText>
+//       </Pressable>
+//     </ScreenShell>
+//   );
+// }
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { LoginForm } from '@/components/auth/login-form';
 import { PageHeader } from '@/components/library/page-header';
@@ -13,9 +94,12 @@ import { useThemedStyles } from '@/hooks/use-themed-styles';
 export default function TeacherLoginScreen() {
   const { loginTeacher } = useAuth();
   const router = useRouter();
+
   const [teacherId, setTeacherId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       back: {
@@ -24,20 +108,43 @@ export default function TeacherLoginScreen() {
         textAlign: 'center',
         marginTop: Spacing.four,
       },
+
+      errorBox: {
+        backgroundColor: 'rgba(255,0,0,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,0,0,0.25)',
+        padding: Spacing.three,
+        borderRadius: 12,
+        marginTop: Spacing.three,
+      },
+
+      errorText: {
+        color: '#ff4d4f',
+        fontWeight: '600',
+        textAlign: 'center',
+      },
     }),
   );
 
   const onLogin = async () => {
+    setError('');
+
     if (!teacherId.trim() || !password) {
-      Alert.alert('Error', 'Enter Teacher ID and password');
+      setError('Enter Professor ID and password.');
       return;
     }
+
     setLoading(true);
+
     try {
       await loginTeacher(teacherId, password);
       router.replace('/(tabs)/teacher' as const);
     } catch (e) {
-      Alert.alert('Login failed', e instanceof Error ? e.message : 'Try again');
+      setError(
+        e instanceof Error
+          ? e.message
+          : 'Login failed. Please try again.',
+      );
     } finally {
       setLoading(false);
     }
@@ -46,18 +153,18 @@ export default function TeacherLoginScreen() {
   return (
     <ScreenShell centered>
       <PageHeader
-        badge="Teacher"
-        title="Teacher Login"
-        subtitle="Sign in to manage books, register students, and handle issue/return"
+        badge="Professor"
+        title="Professor Login"
+        subtitle="Sign in to manage books, register students, and handle book issue and return operations."
       />
 
       <LoginForm
         fields={[
           {
-            label: 'Teacher ID',
+            label: 'Professor ID',
             value: teacherId,
             onChangeText: setTeacherId,
-            placeholder: 'e.g. T001',
+            placeholder: 'e.g. P001',
             autoCapitalize: 'characters',
           },
           {
@@ -70,11 +177,18 @@ export default function TeacherLoginScreen() {
         ]}
         onSubmit={onLogin}
         loading={loading}
-        // hint="Default: T001 / teacher123"
       />
 
+      {!!error && (
+        <View style={styles.errorBox}>
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+        </View>
+      )}
+
       <Pressable onPress={() => router.replace('/welcome')}>
-        <ThemedText style={styles.back}>← Back to role selection</ThemedText>
+        <ThemedText style={styles.back}>
+          ← Back to role selection
+        </ThemedText>
       </Pressable>
     </ScreenShell>
   );

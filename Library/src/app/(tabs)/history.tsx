@@ -224,7 +224,7 @@ export default function HistoryScreen() {
       <PageHeader
         badge="History"
         title="Book Issue History"
-        subtitle="Kaunsi book kis student ke paas hai — search karein"
+        subtitle="Search and track which student has a specific book issued."
       />
 
       <View style={styles.statsRow}>
@@ -254,7 +254,7 @@ export default function HistoryScreen() {
       ) : null}
 
       <Pressable style={styles.linkBtn} onPress={() => router.push('/(tabs)/teacher')}>
-        <ThemedText style={styles.linkBtnText}>← Teacher panel</ThemedText>
+        <ThemedText style={styles.linkBtnText}>← Professor panel</ThemedText>
       </Pressable>
 
       {loading && issues.length === 0 ? (
@@ -263,10 +263,10 @@ export default function HistoryScreen() {
           <ThemedText style={FormStyles.hint}>Loading history…</ThemedText>
         </View>
       ) : issues.length === 0 ? (
-        <ThemedText style={FormStyles.hint}>Abhi koi issue record nahi</ThemedText>
+        <ThemedText style={FormStyles.hint}>There are currently no issued book records.</ThemedText>
       ) : filteredIssues.length === 0 ? (
         <ThemedText style={FormStyles.hint}>
-          Koi record nahi mila — Student ID No, book title ya naam se search karein
+        No records found — search using the Student ID Number, book title, or student name.
         </ThemedText>
       ) : (
         <>

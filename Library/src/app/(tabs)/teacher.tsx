@@ -250,7 +250,7 @@ export default function TeacherScreen() {
       <ScrollView contentContainerStyle={FormStyles.pageCentered}>
         <PageHeader title="Teacher Panel" subtitle="Sign in to manage books and students" />
         <Pressable style={styles.btn} onPress={() => router.push('/login-teacher')}>
-          <ThemedText style={styles.btnText}>Teacher Login</ThemedText>
+          <ThemedText style={styles.btnText}>Professor Login</ThemedText>
         </Pressable>
       </ScrollView>
     );
@@ -438,7 +438,7 @@ export default function TeacherScreen() {
       contentContainerStyle={FormStyles.page}
       refreshControl={<RefreshControl refreshing={loadingStudents} onRefresh={() => loadStudents()} />}>
       <PageHeader
-        badge="Teacher"
+        badge="Professor"
         title={`Welcome, ${teacher?.name ?? 'Staff'}`}
         subtitle={`ID: ${teacher?.teacherId ?? '—'}`}
       />
@@ -450,7 +450,7 @@ export default function TeacherScreen() {
           </ThemedText>
           <ThemedText style={FormStyles.bodyText}>Incharge: {teacher.inCharge || '—'}</ThemedText>
           <ThemedText style={styles.profileHint}>
-            Profile sirf Dean edit kar sakta hai — teacher khud change nahi kar sakta
+            Only the Dean can edit a professor’s profile — professors cannot change their own information.
           </ThemedText>
         </View>
       ) : null}
@@ -570,7 +570,7 @@ export default function TeacherScreen() {
           <ThemedText style={FormStyles.bodyText}>✓ Registered: {issueStudentName}</ThemedText>
         ) : issueStudentIdNo.trim() ? (
           <ThemedText style={[FormStyles.hint, { color: '#b91c1c' }]}>
-            Student not found — register karein ya sahi ID No likhein
+     Student not found — please register the student or enter the correct ID Number.
           </ThemedText>
         ) : null}
         {issueError ? (
@@ -586,7 +586,7 @@ export default function TeacherScreen() {
       <View style={FormStyles.card}>
         <ThemedText style={FormStyles.cardTitle}>🗑️ Manage / Delete Book</ThemedText>
         <ThemedText style={FormStyles.hint}>
-          Delete ke liye apna password zaroori hai. Pehle saari copies return karein.
+      Your password is required to delete the account. Please return all issued book copies first.
         </ThemedText>
         <ThemedText style={FormStyles.label}>Book Catalog ID to delete *</ThemedText>
         <TextInput
@@ -604,7 +604,7 @@ export default function TeacherScreen() {
         visible={Boolean(deleteTarget)}
         bookTitle={deleteTarget?.title}
         title="Book delete — password"
-        subtitle="Book hataane ke liye apna teacher/dean password daalein."
+        subtitle="Enter your Professor/Dean password to remove the book."
         confirmLabel="Delete book"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={confirmDeleteBook}

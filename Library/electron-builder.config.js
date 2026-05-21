@@ -24,7 +24,7 @@ module.exports = {
     allowElevation: true,
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    shortcutName: 'EJ MCAET Library',
+    shortcutName: 'MCAET Library',
     installerLanguages: ['en_US', 'hi_IN'],
     language: '1033',
   },

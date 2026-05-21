@@ -133,7 +133,7 @@ export default function WelcomeScreen() {
         <ThemedText style={styles.heroBadge}>{COLLEGE.libraryName}</ThemedText>
         <ThemedText style={styles.heroTitle}>Sign in</ThemedText>
         <ThemedText style={styles.heroSubtitle}>
-          Student, Teacher, ya Dean — apna role choose karein
+        Student, Professor, or Dean — choose your role.
         </ThemedText>
       </LinearGradient>
 
@@ -161,9 +161,9 @@ export default function WelcomeScreen() {
           <ThemedText style={styles.roleEmoji}>👩‍🏫</ThemedText>
         </View>
         <View style={styles.roleBody}>
-          <ThemedText style={styles.roleTitle}>Teacher</ThemedText>
+          <ThemedText style={styles.roleTitle}>Professor</ThemedText>
           <ThemedText style={styles.roleDesc}>
-            Books issue/return, students register — apni profile khud edit nahi
+            Books can be issued/returned and students can be registered — users cannot edit their own profile.
           </ThemedText>
         </View>
         <ThemedText style={styles.roleArrow}>→</ThemedText>
@@ -178,7 +178,7 @@ export default function WelcomeScreen() {
         <View style={styles.roleBody}>
           <ThemedText style={styles.roleTitle}>Dean</ThemedText>
           <ThemedText style={styles.roleDesc}>
-            Teacher IDs banayein, poori library par full access
+          Create Teacher IDs with full access to the entire library system.
           </ThemedText>
         </View>
         <ThemedText style={styles.roleArrow}>→</ThemedText>

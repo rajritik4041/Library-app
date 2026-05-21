@@ -27,7 +27,7 @@ export function TeacherReturnPasswordModal({
   visible,
   bookTitle,
   title = 'Confirm book return',
-  subtitle = 'Return mark karne se pehle apna password daalein — tab hi book library mein wapas dikhegi.',
+  subtitle = 'Enter your password before marking the book as returned — only then will the book appear back in the library.',
   confirmLabel = 'Confirm return',
   onCancel,
   onConfirm,

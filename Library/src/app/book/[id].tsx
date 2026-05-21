@@ -237,7 +237,7 @@ export default function BookDetailScreen() {
       setStudentLookupError('');
     } catch {
       setStudentName('');
-      setStudentLookupError('Student registered nahi — pehle teacher se register karwayein');
+      setStudentLookupError('Student not registered — please ask a professor to register the student first.');
     }
   };
 
@@ -245,7 +245,7 @@ export default function BookDetailScreen() {
     setIssueError(null);
     const idNo = studentIdNo.trim();
     if (!token || !id || !idNo) {
-      const msg = 'Student ID No (enrollment) zaroori hai';
+      const msg = 'Student ID Number (Enrollment Number) is required.';
       setIssueError(msg);
       showAlert('Error', msg);
       return;
@@ -257,7 +257,7 @@ export default function BookDetailScreen() {
       setStudentLookupError('');
       if (studentAlreadyHasBookOnPage(activeIssues, student.studentId)) {
         const msg =
-          'Ye book is student ke paas pehle se issued hai. Ek hi book dobara issue nahi ho sakti.';
+          'This book has already been issued to this student. The same book cannot be issued again.';
         setIssueError(msg);
         showAlert('Issue not allowed', msg);
         return;
@@ -430,8 +430,8 @@ export default function BookDetailScreen() {
       ) : !isStaff && book.status === 'issued_out' ? (
         <View style={styles.publicNote}>
           <ThemedText style={styles.publicNoteText}>
-            Ye book abhi library mein nahi hai — kisi student ne issue karayi hai. (Student ID sirf
-            teacher dekh sakte hain.)
+            This book is currently not available in the library — it has been issued by another student.
+            Only teachers can view the Student ID.
           </ThemedText>
         </View>
       ) : null}
@@ -440,8 +440,8 @@ export default function BookDetailScreen() {
         <View style={styles.issueForm}>
           <ThemedText style={styles.sectionTitle}>Issue to Student</ThemedText>
           <ThemedText style={styles.issueHint}>
-            Sirf registered students — ID No (enrollment) likhein, User ID nahi. Max{' '}
-            {MAX_STUDENT_ACTIVE_ISSUES} books per student; same book ek baar hi.
+            Only registered students are allowed — enter the ID No (Enrollment No.), not the User ID.
+            Maximum {MAX_STUDENT_ACTIVE_ISSUES} books can be issued per student; the same book can only be issued once.
           </ThemedText>
           <TextInput
             placeholder="Student ID No *"
@@ -462,7 +462,7 @@ export default function BookDetailScreen() {
           ) : studentLookupError ? (
             <ThemedText style={styles.issueErr}>{studentLookupError}</ThemedText>
           ) : null}
-          {issueError ? <ThemedText style={styles.issueErr}>{issueError}</ThemedText> : null}
+          {/* {issueError ? <ThemedText style={styles.issueErr}>{issueError}</ThemedText> : null} */}
           <Pressable style={styles.issueBtn} onPress={issueToStudent}>
             <ThemedText style={styles.issueBtnText}>Issue Book</ThemedText>
           </Pressable>
@@ -471,7 +471,7 @@ export default function BookDetailScreen() {
 
       {!isStaff ? (
         <Pressable style={styles.loginBtn} onPress={() => router.push('/welcome')}>
-          <ThemedText style={styles.loginBtnText}>Sign in (Teacher)</ThemedText>
+          <ThemedText style={styles.loginBtnText}>Sign in (Professor)</ThemedText>
         </Pressable>
       ) : null}
     </ScreenShell>

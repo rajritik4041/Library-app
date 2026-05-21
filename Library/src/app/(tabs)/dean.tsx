@@ -217,7 +217,7 @@ export default function DeanScreen() {
       <PageHeader
         badge="Dean"
         title={`Welcome, ${dean?.name}`}
-        subtitle={`ID: ${dean?.deanId} · Teachers manage karein`}
+        subtitle={`ID: ${dean?.deanId}  \n Professors can manage and oversee all library operations efficiently.`}
       />
 
       <Pressable style={styles.btnSecondary} onPress={() => router.push('/(tabs)/teacher')}>
@@ -226,18 +226,18 @@ export default function DeanScreen() {
 
       <View style={FormStyles.card}>
         <ThemedText style={FormStyles.cardTitle}>
-          {editingId ? `✏️ Edit Teacher — ${editingId}` : '➕ Nayi Teacher ID'}
+          {editingId ? `✏️ Edit Professor — ${editingId}` : `➕ Create New Professor ID`}
         </ThemedText>
         {editingId ? (
           <View style={styles.editBanner}>
             <ThemedText style={styles.editBannerText}>
-              Sirf Dean teacher ki detail badal sakta hai — teacher khud edit nahi kar sakta
-            </ThemedText>
+            Only the Dean can update professor details — professors cannot edit their own information.
+               </ThemedText>
           </View>
         ) : null}
         {!editingId ? (
           <>
-            <ThemedText style={FormStyles.label}>Teacher ID *</ThemedText>
+            <ThemedText style={FormStyles.label}>Professor ID *</ThemedText>
             <TextInput
               placeholder="e.g. T002"
               value={form.teacherId}
@@ -256,7 +256,9 @@ export default function DeanScreen() {
           </>
         ) : (
           <>
-            <ThemedText style={FormStyles.hint}>Naya password (optional — khali chhod sakte hain)</ThemedText>
+            <ThemedText style={FormStyles.hint}>
+            New password (optional — you can leave this field empty)
+              </ThemedText>
             <TextInput
               placeholder="New password"
               value={form.password}
@@ -308,9 +310,9 @@ export default function DeanScreen() {
       </View>
 
       <View style={FormStyles.card}>
-        <ThemedText style={FormStyles.cardTitle}>👩‍🏫 Registered Teachers ({teachers.length})</ThemedText>
+        <ThemedText style={FormStyles.cardTitle}>👩‍🏫 Registered Professors ({teachers.length})</ThemedText>
         {teachers.length === 0 ? (
-          <ThemedText style={FormStyles.hint}>Abhi koi teacher nahi — upar se add karein</ThemedText>
+          <ThemedText style={FormStyles.hint}>No professors have been added yet — add one using the option above.</ThemedText>
         ) : (
           teachers.map((t) => (
             <View key={t.teacherId} style={styles.teacherRow}>
