@@ -18,9 +18,8 @@ import {
 } from './issue-limits.js';
 import { connectMongo, ensureMongoConnected, withMongoRetry } from './mongo-connection.js';
 
-dotenv.config();
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
@@ -1445,7 +1444,17 @@ app.get('/api/health', async (_req, res) => {
     payload.warning =
       'FILE mode — app MongoDB use nahi karega. Teacher save server/data mein, deploy se alag ho sakta hai.';
     payload.ok = true;
-  } else if (!mongoConnected) {
+    const stats = fileStore.fileStats();
+    payload.counts = {
+      books: stats.totalBooks,
+      students: fileStore.fileListStudents().length,
+      teachers: fileStore.fileListTeachers().length,
+      activeIssues: stats.activeIssues,
+    };
+    return res.json(payload);
+  }
+
+  if (!mongoConnected) {
     payload.ok = false;
     payload.mongo.error = 'MongoDB not connected';
     return res.status(503).json(payload);

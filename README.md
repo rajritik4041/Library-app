@@ -31,16 +31,29 @@ Library-app/
 | **Start Command** | `npm start` |
 | **URL** | https://library-app-x9zn.onrender.com |
 
-**Env:** `USE_FILE_STORE=1`, `JWT_SECRET=...`, `DEFAULT_TEACHER_ID=T001`, `DEFAULT_TEACHER_PASSWORD=teacher123`
+**Env (Render dashboard):** `MONGODB_URI`, `JWT_SECRET`, `DEFAULT_TEACHER_*` — **do not** set `USE_FILE_STORE=1` (MongoDB required).
 
-## Local
+## Local (naya laptop / clone ke baad)
 
 ```bash
-# Backend
-cd backend && npm install && npm start
+cd Library
+npm install          # server/.env auto banega (.env.example se)
+npm run setup        # server deps + Excel → catalog.json
+npm run server       # API http://localhost:3001  (alag terminal)
+npm start            # Expo app
+```
 
-# Frontend
-cd Library && npm install && npm start
+Ya ek saath: `npm run dev` (server + Expo).
+
+**Zaroori:** `Library/server/.env` mein `MONGODB_URI` hona chahiye. `npm install` / `npm run setup` pehli baar `.env.example` se copy karta hai. Render par jo URI hai wahi localhost par bhi — same books/students.
+
+**Health check:** `http://localhost:3001/api/health` → `"ok": true`, `"mode": "mongodb"`.
+
+## Local (sirf backend)
+
+```bash
+cd Library && npm run sync-backend
+cd backend && npm install && npm start
 ```
 
 ## Excel books update

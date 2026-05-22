@@ -30,8 +30,14 @@ const copies = [
   [path.join(server, 'index.js'), path.join(backend, 'index.js')],
   [path.join(server, 'file-store.js'), path.join(backend, 'file-store.js')],
   [path.join(server, 'google-sheets-sync.js'), path.join(backend, 'google-sheets-sync.js')],
+  [path.join(server, 'mongo-connection.js'), path.join(backend, 'mongo-connection.js')],
+  [path.join(server, 'issue-limits.js'), path.join(backend, 'issue-limits.js')],
   [path.join(server, 'package.json'), path.join(backend, 'package.json')],
+  [path.join(server, '.env.example'), path.join(backend, '.env.example')],
+  [path.join(server, 'scripts', 'ensure-env.js'), path.join(backend, 'scripts', 'ensure-env.js')],
 ];
+
+fs.mkdirSync(path.join(backend, 'scripts'), { recursive: true });
 
 for (const [from, to] of copies) {
   if (!fs.existsSync(from)) {

@@ -69,13 +69,14 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
       const mode = health.mode === 'mongodb' ? 'mongodb' : 'file';
       setApiMode(mode);
 
-      if (mode !== 'mongodb') {
+      if (!health.ok) {
         setApiOnline(false);
         const hint =
+          health.mongo?.error ||
           health.hint ||
           health.warning ||
-          'server/.env → MONGODB_URI (Render wala same URI), USE_FILE_STORE=0';
-        setError(`MongoDB mode nahi (${API_URL}). ${hint}`);
+          'cd Library && npm run setup && npm run server';
+        setError(`API offline (${API_URL}). ${hint}`);
         const cached = getLocalApiBooks().map(enrichApiBook);
         if (cached.length > 0) {
           setBooks(cached);
@@ -93,9 +94,15 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
       ]);
 
       setBooks(remote.map(enrichApiBook));
-      setApiOnline(true);
-      setDataSource('mongodb');
-      setError(null);
+      setApiOnline(mode === 'mongodb');
+      setDataSource(mode === 'mongodb' ? 'mongodb' : 'offline-cache');
+      setError(
+        mode === 'file'
+          ? health.warning ||
+              health.hint ||
+              'FILE mode — npm run setup (server/.env MONGODB_URI), phir npm run server'
+          : null,
+      );
       setActiveIssues(statsRes?.activeIssues ?? 0);
     } catch (e) {
       setApiOnline(false);
