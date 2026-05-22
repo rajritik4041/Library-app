@@ -1,6 +1,6 @@
 // import { useRouter } from 'expo-router';
 // import React, { useState } from 'react';
-// import { Alert, Pressable, StyleSheet } from 'react-native';
+// import { Pressable, StyleSheet } from 'react-native';
 
 // import { LoginForm } from '@/components/auth/login-form';
 // import { PageHeader } from '@/components/library/page-header';
@@ -9,11 +9,12 @@
 // import { useAuth } from '@/context/auth-context';
 // import { Spacing } from '@/constants/theme';
 // import { useThemedStyles } from '@/hooks/use-themed-styles';
+// import { showAlert } from '@/lib/show-alert';
 
-// export default function TeacherLoginScreen() {
-//   const { loginTeacher } = useAuth();
+// export default function LoginDeanScreen() {
+//   const { loginDean } = useAuth();
 //   const router = useRouter();
-//   const [teacherId, setTeacherId] = useState('');
+//   const [deanId, setDeanId] = useState('');
 //   const [password, setPassword] = useState('');
 //   const [loading, setLoading] = useState(false);
 //   const styles = useThemedStyles((c) =>
@@ -28,16 +29,16 @@
 //   );
 
 //   const onLogin = async () => {
-//     if (!teacherId.trim() || !password) {
-//       Alert.alert('Error', 'Enter Teacher ID and password');
+//     if (!deanId.trim() || !password) {
+//       showAlert('Error', 'Enter the Dean ID and password.');
 //       return;
 //     }
 //     setLoading(true);
 //     try {
-//       await loginTeacher(teacherId, password);
-//       router.replace('/(tabs)/teacher' as const);
+//       await loginDean(deanId, password);
+//       router.replace('/(tabs)/dean' as const);
 //     } catch (e) {
-//       Alert.alert('Login failed', e instanceof Error ? e.message : 'Try again');
+//       showAlert('Login failed', e instanceof Error ? e.message : 'Try again');
 //     } finally {
 //       setLoading(false);
 //     }
@@ -46,18 +47,18 @@
 //   return (
 //     <ScreenShell centered>
 //       <PageHeader
-//         badge="Teacher"
-//         title="Teacher Login"
-//         subtitle="Sign in to manage books, register students, and handle issue/return"
+//         badge="Dean"
+//         title="Dean Login"
+//         subtitle="Create professor accounts with full access to manage the entire library system."
 //       />
 
 //       <LoginForm
 //         fields={[
 //           {
-//             label: 'Teacher ID',
-//             value: teacherId,
-//             onChangeText: setTeacherId,
-//             placeholder: 'e.g. T001',
+//             label: 'Dean ID',
+//             value: deanId,
+//             onChangeText: setDeanId,
+//             placeholder: 'e.g. DEAN01',
 //             autoCapitalize: 'characters',
 //           },
 //           {
@@ -70,7 +71,7 @@
 //         ]}
 //         onSubmit={onLogin}
 //         loading={loading}
-//         // hint="Default: T001 / teacher123"
+//         hint="Default: DEAN01 / dean123"
 //       />
 
 //       <Pressable onPress={() => router.replace('/welcome')}>
@@ -91,11 +92,11 @@ import { useAuth } from '@/context/auth-context';
 import { Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 
-export default function TeacherLoginScreen() {
-  const { loginTeacher } = useAuth();
+export default function LoginDeanScreen() {
+  const { loginDean } = useAuth();
   const router = useRouter();
 
-  const [teacherId, setTeacherId] = useState('');
+  const [deanId, setDeanId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -129,16 +130,16 @@ export default function TeacherLoginScreen() {
   const onLogin = async () => {
     setError('');
 
-    if (!teacherId.trim() || !password) {
-      setError('Enter Professor ID and password.');
+    if (!deanId.trim() || !password) {
+      setError('Enter the Dean ID and password.');
       return;
     }
 
     setLoading(true);
 
     try {
-      await loginTeacher(teacherId, password);
-      router.replace('/(tabs)/teacher' as const);
+      await loginDean(deanId, password);
+      router.replace('/(tabs)/dean' as const);
     } catch (e) {
       setError(
         e instanceof Error
@@ -153,18 +154,18 @@ export default function TeacherLoginScreen() {
   return (
     <ScreenShell centered>
       <PageHeader
-        badge="Professor"
-        title="Professor Login"
-        subtitle="Sign in to manage books, register students, and handle book issue and return operations."
+        badge="Dean"
+        title="Dean Login"
+        subtitle="Create professor accounts with full access to manage the entire library system."
       />
 
       <LoginForm
         fields={[
           {
-            label: 'Professor ID',
-            value: teacherId,
-            onChangeText: setTeacherId,
-            placeholder: 'e.g. P001',
+            label: 'Dean ID',
+            value: deanId,
+            onChangeText: setDeanId,
+            placeholder: 'e.g. DEAN01',
             autoCapitalize: 'characters',
           },
           {
@@ -177,6 +178,7 @@ export default function TeacherLoginScreen() {
         ]}
         onSubmit={onLogin}
         loading={loading}
+        // hint="Default: DEAN01 / dean123"
       />
 
       {!!error && (

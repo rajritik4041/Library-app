@@ -247,9 +247,9 @@ export default function HomeScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}>
-        <View style={styles.heroBadge}>
+        {/* <View style={styles.heroBadge}>
           <ThemedText style={styles.heroBadgeText}>{sourceLabel}</ThemedText>
-        </View>
+        </View> */}
         <ThemedText style={styles.heroTitle}>{COLLEGE.libraryName}</ThemedText>
         <ThemedText style={styles.heroSubtitle}>
           {stats.totalTitles} books · {stats.availableCopies} copies in library · Rack search

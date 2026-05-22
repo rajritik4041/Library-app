@@ -1,0 +1,13 @@
+[
+  {
+    "studentId": "STU99",
+    "studentUserId": "U99",
+    "passwordHash": "$2a$10$7RdZ8eILRlgZK66khNweauesQugtuO.Cd/cDY2U2C.atVhXMB5w7m",
+    "name": "Test Student",
+    "mobile": "9000000099",
+    "course": "B.Tech",
+    "year": "1",
+    "department": "CSE",
+    "createdAt": "2026-05-21T07:19:32.401Z"
+  }
+]

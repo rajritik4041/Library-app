@@ -39,7 +39,7 @@ function TabHeader() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const compact = width < 380;
-  const { isTeacher, isStudent, teacher, student, logout } = useAuth();
+  const { isStaff, isDean, isTeacher, isStudent, teacher, dean, student, logout } = useAuth();
   const router = useRouter();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
@@ -120,10 +120,16 @@ function TabHeader() {
 
         <View style={styles.headerActions}>
           <ThemeToggle onDark compact />
-          {isTeacher || isStudent ? (
+          {isStaff || isStudent ? (
             <Pressable onPress={logout} style={styles.authBtn}>
               <ThemedText style={styles.authBtnText} numberOfLines={1}>
-                {compact ? 'Out' : isTeacher ? `${teacher?.teacherId} · Logout` : `${student?.userId} · Logout`}
+                {compact
+                  ? 'Out'
+                  : isDean
+                    ? `${dean?.deanId} · Logout`
+                    : isTeacher
+                      ? `${teacher?.teacherId} · Logout`
+                      : `${student?.userId} · Logout`}
               </ThemedText>
             </Pressable>
           ) : (
@@ -139,7 +145,7 @@ function TabHeader() {
 
 export default function AppTabs() {
   const insets = useSafeAreaInsets();
-  const { isTeacher } = useAuth();
+  const { isStaff, isDean } = useAuth();
   const colors = useLibraryColors();
   const tabBarHeight = 56 + Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 6);
 
@@ -185,10 +191,18 @@ export default function AppTabs() {
         }}
       />
       <Tabs.Screen
+        name="dean"
+        options={{
+          title: 'Dean',
+          href: isDean ? undefined : null,
+          tabBarIcon: ({ focused }) => <TabIcon name="teacher" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="teacher"
         options={{
           title: 'Teacher',
-          href: isTeacher ? undefined : null,
+          href: isStaff ? undefined : null,
           tabBarIcon: ({ focused }) => <TabIcon name="teacher" focused={focused} />,
         }}
       />
@@ -196,7 +210,7 @@ export default function AppTabs() {
         name="history"
         options={{
           title: 'History',
-          href: isTeacher ? undefined : null,
+          href: isStaff ? undefined : null,
           tabBarIcon: ({ focused }) => <TabIcon name="history" focused={focused} />,
         }}
       />

@@ -14,7 +14,7 @@ export function AnimatedSplashOverlay() {
 
   const splashKeyframe = new Keyframe({
     0: {
-      transform: [{ scale: INITIAL_SCALE_FACTOR }],
+      transform: [{ scale:  INITIAL_SCALE_FACTOR }],
       opacity: 1,
     },
     20: {

@@ -19,5 +19,66 @@
     "teacherName": "Library Teacher",
     "issuedAt": "2026-05-18T10:18:38.825Z",
     "status": "issued"
+  },
+  {
+    "id": "iss_1779347972520_70hyuh3",
+    "catalogId": "2",
+    "studentId": "STU99",
+    "studentName": "Test Student",
+    "teacherId": "T002",
+    "teacherName": "Dr Sharma",
+    "issuedAt": "2026-05-21T07:19:32.521Z",
+    "status": "issued"
+  },
+  {
+    "id": "iss_1779347972564_0dtjukp",
+    "catalogId": "3",
+    "studentId": "STU99",
+    "studentName": "Test Student",
+    "teacherId": "T002",
+    "teacherName": "Dr Sharma",
+    "issuedAt": "2026-05-21T07:19:32.564Z",
+    "status": "issued"
+  },
+  {
+    "id": "iss_1779347972608_fek7aia",
+    "catalogId": "4",
+    "studentId": "STU99",
+    "studentName": "Test Student",
+    "teacherId": "T002",
+    "teacherName": "Dr Sharma",
+    "issuedAt": "2026-05-21T07:19:32.608Z",
+    "status": "issued"
+  },
+  {
+    "id": "iss_1779347972649_myranlt",
+    "catalogId": "5",
+    "studentId": "STU99",
+    "studentName": "Test Student",
+    "teacherId": "T002",
+    "teacherName": "Dr Sharma",
+    "issuedAt": "2026-05-21T07:19:32.649Z",
+    "status": "returned",
+    "returnedAt": "2026-05-21T07:44:13.020Z"
+  },
+  {
+    "id": "iss_1779347972691_uw2djzk",
+    "catalogId": "6",
+    "studentId": "STU99",
+    "studentName": "Test Student",
+    "teacherId": "T002",
+    "teacherName": "Dr Sharma",
+    "issuedAt": "2026-05-21T07:19:32.691Z",
+    "status": "issued"
+  },
+  {
+    "id": "iss_1779349485240_bxsr53z",
+    "catalogId": "8",
+    "studentId": "STU99",
+    "studentName": "Test Student",
+    "teacherId": "T001",
+    "teacherName": "Shiwam Sir",
+    "issuedAt": "2026-05-21T07:44:45.240Z",
+    "status": "issued"
   }
 ]

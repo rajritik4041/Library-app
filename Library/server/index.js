@@ -51,6 +51,18 @@ const teacherSchema = new mongoose.Schema(
     teacherId: { type: String, required: true, unique: true, uppercase: true },
     passwordHash: { type: String, required: true },
     name: { type: String, required: true },
+    mobile: { type: String, default: '', trim: true },
+    department: { type: String, default: '', trim: true },
+    inCharge: { type: String, default: '', trim: true },
+  },
+  { timestamps: true },
+);
+
+const deanSchema = new mongoose.Schema(
+  {
+    deanId: { type: String, required: true, unique: true, uppercase: true },
+    passwordHash: { type: String, required: true },
+    name: { type: String, required: true },
   },
   { timestamps: true },
 );
@@ -87,6 +99,7 @@ const issueSchema = new mongoose.Schema(
 
 const Book = mongoose.model('Book', bookSchema);
 const Teacher = mongoose.model('Teacher', teacherSchema);
+const Dean = mongoose.model('Dean', deanSchema);
 const Student = mongoose.model('Student', studentSchema);
 const Issue = mongoose.model('Issue', issueSchema);
 
@@ -102,6 +115,25 @@ function verifyToken(req) {
   }
 }
 
+function staffFromPayload(payload) {
+  if (payload.role === 'dean') {
+    return {
+      role: 'dean',
+      teacherId: payload.deanId,
+      deanId: payload.deanId,
+      name: payload.name,
+    };
+  }
+  return {
+    role: 'teacher',
+    teacherId: payload.teacherId,
+    name: payload.name,
+    mobile: payload.mobile,
+    department: payload.department,
+    inCharge: payload.inCharge,
+  };
+}
+
 function authTeacher(req, res, next) {
   const payload = verifyToken(req);
   if (!payload) {
@@ -110,11 +142,42 @@ function authTeacher(req, res, next) {
   if (payload.role === 'student') {
     return res.status(403).json({ error: 'Teacher access required' });
   }
-  if (!payload.teacherId) {
-    return res.status(401).json({ error: 'Invalid session' });
+  if (payload.role === 'dean' && payload.deanId) {
+    req.auth = payload;
+    req.teacher = staffFromPayload(payload);
+    return next();
   }
-  req.teacher = payload;
+  if (payload.role === 'teacher' && payload.teacherId) {
+    req.auth = payload;
+    req.teacher = staffFromPayload(payload);
+    return next();
+  }
+  return res.status(401).json({ error: 'Invalid session' });
+}
+
+function authDean(req, res, next) {
+  const payload = verifyToken(req);
+  if (!payload) {
+    return res.status(401).json({ error: 'Login required' });
+  }
+  if (payload.role !== 'dean' || !payload.deanId) {
+    return res.status(403).json({ error: 'Dean access required' });
+  }
+  req.auth = payload;
+  req.dean = { deanId: payload.deanId, name: payload.name };
   next();
+}
+
+function teacherPublic(doc) {
+  const d = doc?.toObject ? doc.toObject() : doc;
+  return {
+    teacherId: d.teacherId,
+    name: d.name,
+    mobile: d.mobile || '',
+    department: d.department || '',
+    inCharge: d.inCharge || '',
+    createdAt: d.createdAt,
+  };
 }
 
 function authStudent(req, res, next) {
@@ -300,12 +363,31 @@ function resolveAuthors(doc) {
 async function verifyTeacherPassword(teacherId, password) {
   if (!password) return false;
   if (USE_FILE_MODE) {
-    const row = await fileStore.verifyFileTeacher(teacherId, password, process.env);
+    const row = await fileStore.verifyFileTeacher(teacherId, password);
     return Boolean(row);
   }
   const teacher = await Teacher.findOne({ teacherId: String(teacherId).toUpperCase() });
   if (!teacher) return false;
   return bcrypt.compare(password, teacher.passwordHash);
+}
+
+async function verifyDeanPassword(deanId, password) {
+  if (!password) return false;
+  if (USE_FILE_MODE) {
+    const row = await fileStore.verifyFileDean(deanId, password);
+    return Boolean(row);
+  }
+  const dean = await Dean.findOne({ deanId: String(deanId).toUpperCase() });
+  if (!dean) return false;
+  return bcrypt.compare(password, dean.passwordHash);
+}
+
+async function verifyStaffPassword(staff, password) {
+  if (!staff || !password) return false;
+  if (staff.role === 'dean' || staff.deanId) {
+    return verifyDeanPassword(staff.deanId || staff.teacherId, password);
+  }
+  return verifyTeacherPassword(staff.teacherId, password);
 }
 
 function formatEnrichedBook(book, issued = 0) {
@@ -400,8 +482,27 @@ async function seedTeacher() {
     teacherId,
     passwordHash: hash,
     name: process.env.DEFAULT_TEACHER_NAME || 'Library Teacher',
+    mobile: '',
+    department: '',
+    inCharge: '',
   });
   console.log(`Default teacher created: ${teacherId} / ${password}`);
+}
+
+async function seedDean() {
+  const deanId = (process.env.DEFAULT_DEAN_ID || 'DEAN01').toUpperCase();
+  const exists = await Dean.findOne({ deanId });
+  if (exists) {
+    return;
+  }
+  const password = process.env.DEFAULT_DEAN_PASSWORD || 'dean123';
+  const hash = await bcrypt.hash(password, 10);
+  await Dean.create({
+    deanId,
+    passwordHash: hash,
+    name: process.env.DEFAULT_DEAN_NAME || 'Dean Sir',
+  });
+  console.log(`Default dean created: ${deanId} / ${password}`);
 }
 
 // ——— Auth ———
@@ -413,25 +514,29 @@ app.post('/api/auth/teacher/login', async (req, res) => {
     }
     let teacherRow = null;
     if (USE_FILE_MODE) {
-      teacherRow = await fileStore.verifyFileTeacher(teacherId, password, process.env);
+      teacherRow = await fileStore.verifyFileTeacher(teacherId, password);
     } else {
       const teacher = await Teacher.findOne({ teacherId: String(teacherId).toUpperCase() });
       if (teacher && (await bcrypt.compare(password, teacher.passwordHash))) {
-        teacherRow = { teacherId: teacher.teacherId, name: teacher.name };
+        teacherRow = teacherPublic(teacher);
       }
     }
     if (!teacherRow) {
       return res.status(401).json({ error: 'Invalid teacher ID or password' });
     }
     const token = jwt.sign(
-      { role: 'teacher', teacherId: teacherRow.teacherId, name: teacherRow.name },
+      {
+        role: 'teacher',
+        teacherId: teacherRow.teacherId,
+        name: teacherRow.name,
+        mobile: teacherRow.mobile,
+        department: teacherRow.department,
+        inCharge: teacherRow.inCharge,
+      },
       JWT_SECRET,
       { expiresIn: '7d' },
     );
-    res.json({
-      token,
-      teacher: { teacherId: teacherRow.teacherId, name: teacherRow.name },
-    });
+    res.json({ token, teacher: teacherRow });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
@@ -469,6 +574,36 @@ app.post('/api/auth/student/login', async (req, res) => {
   }
 });
 
+app.post('/api/auth/dean/login', async (req, res) => {
+  try {
+    const { deanId, password } = req.body;
+    if (!deanId || !password) {
+      return res.status(400).json({ error: 'Dean ID and password required' });
+    }
+    let deanRow = null;
+    if (USE_FILE_MODE) {
+      deanRow = await fileStore.verifyFileDean(deanId, password);
+    } else {
+      const dean = await Dean.findOne({ deanId: String(deanId).toUpperCase() });
+      if (dean && (await bcrypt.compare(password, dean.passwordHash))) {
+        deanRow = { deanId: dean.deanId, name: dean.name };
+      }
+    }
+    if (!deanRow) {
+      return res.status(401).json({ error: 'Invalid dean ID or password' });
+    }
+    const token = jwt.sign(
+      { role: 'dean', deanId: deanRow.deanId, name: deanRow.name },
+      JWT_SECRET,
+      { expiresIn: '7d' },
+    );
+    res.json({ token, dean: deanRow });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
 app.get('/api/auth/me', (req, res) => {
   const payload = verifyToken(req);
   if (!payload) {
@@ -489,10 +624,125 @@ app.get('/api/auth/me', (req, res) => {
       },
     });
   }
+  if (payload.role === 'dean') {
+    return res.json({
+      role: 'dean',
+      dean: { deanId: payload.deanId, name: payload.name },
+    });
+  }
   res.json({
     role: 'teacher',
-    teacher: { teacherId: payload.teacherId, name: payload.name },
+    teacher: {
+      teacherId: payload.teacherId,
+      name: payload.name,
+      mobile: payload.mobile || '',
+      department: payload.department || '',
+      inCharge: payload.inCharge || '',
+    },
   });
+});
+
+// ——— Dean: manage teachers (only dean can create/edit/delete teacher accounts) ———
+app.get('/api/dean/teachers', authDean, async (_req, res) => {
+  try {
+    if (USE_FILE_MODE) {
+      return res.json({ teachers: fileStore.fileListTeachers() });
+    }
+    const teachers = await Teacher.find().sort({ teacherId: 1 });
+    res.json({ teachers: teachers.map(teacherPublic) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load teachers' });
+  }
+});
+
+app.post('/api/dean/teachers', authDean, async (req, res) => {
+  try {
+    const { teacherId, password, name, mobile, department, inCharge } = req.body;
+    if (!teacherId?.trim() || !password || !name?.trim()) {
+      return res.status(400).json({ error: 'Teacher ID, password, and name required' });
+    }
+    if (USE_FILE_MODE) {
+      const teacher = await fileStore.fileCreateTeacher({
+        teacherId,
+        password,
+        name,
+        mobile,
+        department,
+        inCharge,
+      });
+      return res.status(201).json({ teacher });
+    }
+    const id = String(teacherId).toUpperCase().trim();
+    const exists = await Teacher.findOne({ teacherId: id });
+    if (exists) {
+      return res.status(409).json({ error: 'Teacher ID already exists' });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    const doc = await Teacher.create({
+      teacherId: id,
+      passwordHash: hash,
+      name: String(name).trim(),
+      mobile: String(mobile || '').trim(),
+      department: String(department || '').trim(),
+      inCharge: String(inCharge || '').trim(),
+    });
+    res.status(201).json({ teacher: teacherPublic(doc) });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message || 'Failed to create teacher' });
+  }
+});
+
+app.put('/api/dean/teachers/:teacherId', authDean, async (req, res) => {
+  try {
+    const key = String(req.params.teacherId).toUpperCase().trim();
+    const { password, name, mobile, department, inCharge } = req.body;
+    if (USE_FILE_MODE) {
+      const teacher = await fileStore.fileUpdateTeacher(key, {
+        password,
+        name,
+        mobile,
+        department,
+        inCharge,
+      });
+      return res.json({ teacher });
+    }
+    const doc = await Teacher.findOne({ teacherId: key });
+    if (!doc) {
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+    if (name !== undefined) doc.name = String(name).trim();
+    if (mobile !== undefined) doc.mobile = String(mobile).trim();
+    if (department !== undefined) doc.department = String(department).trim();
+    if (inCharge !== undefined) doc.inCharge = String(inCharge).trim();
+    if (password) {
+      doc.passwordHash = await bcrypt.hash(password, 10);
+    }
+    await doc.save();
+    res.json({ teacher: teacherPublic(doc) });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message || 'Failed to update teacher' });
+  }
+});
+
+app.delete('/api/dean/teachers/:teacherId', authDean, async (req, res) => {
+  try {
+    const key = String(req.params.teacherId).toUpperCase().trim();
+    if (USE_FILE_MODE) {
+      fileStore.fileDeleteTeacher(key);
+      return res.json({ ok: true });
+    }
+    const result = await Teacher.deleteOne({ teacherId: key });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message || 'Failed to delete teacher' });
+  }
 });
 
 // ——— Students (teacher) ———
@@ -894,6 +1144,14 @@ app.put('/api/books/:catalogId', authTeacher, async (req, res) => {
 
 app.delete('/api/books/:catalogId', authTeacher, async (req, res) => {
   try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: 'Apna password daalein — book delete ke liye zaroori hai' });
+    }
+    const passwordOk = await verifyStaffPassword(req.teacher, password);
+    if (!passwordOk) {
+      return res.status(401).json({ error: 'Galat password — book delete nahi hui' });
+    }
     const catalogKey = decodeURIComponent(String(req.params.catalogId || ''));
     if (USE_FILE_MODE) {
       const found = await findBookByCatalogOrSerial(catalogKey);
@@ -1110,9 +1368,9 @@ app.post('/api/issues/:issueId/return', authTeacher, async (req, res) => {
     if (!password) {
       return res.status(400).json({ error: 'Teacher password required to confirm return' });
     }
-    const passwordOk = await verifyTeacherPassword(req.teacher.teacherId, password);
+    const passwordOk = await verifyStaffPassword(req.teacher, password);
     if (!passwordOk) {
-      return res.status(401).json({ error: 'Wrong teacher password' });
+      return res.status(401).json({ error: 'Galat password — return confirm nahi hua' });
     }
     if (USE_FILE_MODE) {
       const { book } = fileStore.fileReturnIssue(req.params.issueId);
@@ -1254,13 +1512,22 @@ async function start() {
 
   if (forceFile) {
     USE_FILE_MODE = true;
-    await fileStore.initFileTeacher(process.env);
+    await fileStore.initFileStaff(process.env);
+    if (!uri?.trim()) {
+      console.warn(
+        '⚠ server/.env missing ya MONGODB_URI khali — FILE mode (dean/teacher/books local JSON mein, MongoDB nahi).',
+      );
+      console.warn('   Fix: cp server/.env.example server/.env  →  npm run server');
+    } else {
+      console.warn('⚠ USE_FILE_STORE=1 — FILE mode active');
+    }
     console.log('FILE mode: Excel → ../src/data/catalog.json | issues → server/data/issues.json');
   } else {
     try {
       await connectMongo(uri);
       USE_FILE_MODE = false;
       console.log('MongoDB connected');
+      await seedDean();
       await seedTeacher();
       await migrateStudentUserIds();
       await seedFromCatalog();
@@ -1295,7 +1562,7 @@ async function start() {
     } catch (e) {
       console.warn('MongoDB connect failed → FILE mode:', e.message);
       USE_FILE_MODE = true;
-      await fileStore.initFileTeacher(process.env);
+      await fileStore.initFileStaff(process.env);
     }
   }
 

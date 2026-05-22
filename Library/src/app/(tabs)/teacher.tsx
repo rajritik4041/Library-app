@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Platform,
   Pressable,
   RefreshControl,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 
 import { PageHeader } from '@/components/library/page-header';
+import { TeacherReturnPasswordModal } from '@/components/library/teacher-return-password-modal';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { useBooksApi } from '@/context/books-api-context';
@@ -22,10 +22,11 @@ import { api } from '@/services/api';
 import { resolveBookCatalogId } from '@/lib/book-id';
 import { MAX_STUDENT_ACTIVE_ISSUES, validateStudentCanIssue } from '@/lib/issue-limits';
 import { confirmAsync } from '@/lib/confirm';
+import { showAlert } from '@/lib/show-alert';
 import type { ApiStudent } from '@/types/api';
 
 export default function TeacherScreen() {
-  const { isTeacher, token, teacher, logout } = useAuth();
+  const { isStaff, token, teacher, logout } = useAuth();
   const { books, refresh } = useBooksApi();
   const router = useRouter();
   const { styles: FormStyles, colors: FormColors } = useFormStyles();
@@ -108,6 +109,24 @@ export default function TeacherScreen() {
         borderColor: '#fcd34d',
       },
       syncBannerText: { color: '#92400e', fontSize: 13, fontWeight: '600', lineHeight: 20 },
+      issueErrorBanner: {
+        backgroundColor: '#fef2f2',
+        borderWidth: 1,
+        borderColor: '#fecaca',
+        borderRadius: Radius.md,
+        padding: Spacing.three,
+        width: '100%',
+      },
+      issueErrorText: { color: '#b91c1c', fontWeight: '700', fontSize: 14, lineHeight: 20 },
+      profileBox: {
+        backgroundColor: c.surfaceAlt,
+        borderRadius: Radius.md,
+        padding: Spacing.three,
+        gap: Spacing.one,
+        borderWidth: 1,
+        borderColor: c.border,
+      },
+      profileHint: { fontSize: 12, color: c.inkMuted, fontStyle: 'italic' },
     }),
   );
 
@@ -129,6 +148,8 @@ export default function TeacherScreen() {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [studentSearch, setStudentSearch] = useState('');
   const [syncBanner, setSyncBanner] = useState<string | null>(null);
+  const [issueError, setIssueError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const loadStudents = useCallback(
     async (search?: string) => {
@@ -138,7 +159,7 @@ export default function TeacherScreen() {
         const data = await api.getStudents(token, search);
         setStudents(data.students);
       } catch (e) {
-        Alert.alert('Error', e instanceof Error ? e.message : 'Failed to load students');
+        showAlert('Error', e instanceof Error ? e.message : 'Failed to load students');
       } finally {
         setLoadingStudents(false);
       }
@@ -147,11 +168,11 @@ export default function TeacherScreen() {
   );
 
   useEffect(() => {
-    if (isTeacher && token) loadStudents();
-  }, [isTeacher, token, loadStudents]);
+    if (isStaff && token) loadStudents();
+  }, [isStaff, token, loadStudents]);
 
   useEffect(() => {
-    if (!isTeacher) return;
+    if (!isStaff) return;
     void api.health().then((h) => {
       const s = h.sync;
       if (!s) return;
@@ -170,12 +191,12 @@ export default function TeacherScreen() {
         setSyncBanner(null);
       }
     });
-  }, [isTeacher]);
+  }, [isStaff]);
 
   const openEdit = (s: ApiStudent) => {
     const key = (s.userId || s.studentUserId || '').trim();
     if (!key) {
-      Alert.alert('Error', 'Student User ID missing — cannot edit');
+      showAlert('Error', 'Student User ID missing — cannot edit');
       return;
     }
     router.push({
@@ -190,7 +211,7 @@ export default function TeacherScreen() {
       .trim()
       .toUpperCase();
     if (!key) {
-      Alert.alert('Error', 'Cannot identify student');
+      showAlert('Error', 'Cannot identify student');
       return;
     }
     const ok = await confirmAsync(
@@ -203,9 +224,9 @@ export default function TeacherScreen() {
     try {
       await api.deleteStudent(token, key);
       await loadStudents(studentSearch.trim() || undefined);
-      Alert.alert('Deleted', `${s.name} removed from library`);
+      showAlert('Deleted', `${s.name} removed from library`);
     } catch (e) {
-      Alert.alert('Delete failed', e instanceof Error ? e.message : 'Could not delete student');
+      showAlert('Delete failed', e instanceof Error ? e.message : 'Could not delete student');
     }
   };
 
@@ -224,12 +245,12 @@ export default function TeacherScreen() {
     }
   };
 
-  if (!isTeacher || !token) {
+  if (!isStaff || !token) {
     return (
       <ScrollView contentContainerStyle={FormStyles.pageCentered}>
         <PageHeader title="Teacher Panel" subtitle="Sign in to manage books and students" />
         <Pressable style={styles.btn} onPress={() => router.push('/login-teacher')}>
-          <ThemedText style={styles.btnText}>Teacher Login</ThemedText>
+          <ThemedText style={styles.btnText}>Professor Login</ThemedText>
         </Pressable>
       </ScrollView>
     );
@@ -237,15 +258,15 @@ export default function TeacherScreen() {
 
   const addBook = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Book title is required');
+      showAlert('Error', 'Book title is required');
       return;
     }
     if (!authors.trim()) {
-      Alert.alert('Error', 'Author name is required');
+      showAlert('Error', 'Author name is required');
       return;
     }
     if (!subject.trim()) {
-      Alert.alert('Error', 'Subject name is required');
+      showAlert('Error', 'Subject name is required');
       return;
     }
     try {
@@ -263,29 +284,79 @@ export default function TeacherScreen() {
       setPublisher('');
       setSubject('');
       await refresh();
-      Alert.alert(
+      showAlert(
         res.sheetWarning ? 'Added (Excel sync pending)' : 'Success',
         res.sheetWarning
           ? `MongoDB mein save ho gaya.\n\n${res.sheetWarning}`
           : 'Book added — MongoDB & Excel synced',
       );
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Failed');
+      showAlert('Error', e instanceof Error ? e.message : 'Failed');
     }
   };
 
+  // const issueBook = async () => {
+  //   if (!token) return;
+  //   const catalogId = resolveBookCatalogId(issueBookId, books);
+  //   const idNo = issueStudentIdNo.trim();
+  //   if (!catalogId || !idNo) {
+  //     showAlert('Error', 'Book Catalog ID (or book #) and Student ID No are required');
+  //     return;
+  //   }
+  //   if (students.length === 0) {
+  //     showAlert('Error', 'Pehle kam se kam ek student register karein — bina registration book issue nahi hogi');
+  //     return;
+  //   }
+
+  //   try {
+  //     const { student } = await api.lookupStudentByIdNo(token, idNo);
+  //     if (!issueStudentName.trim()) {
+  //       setIssueStudentName(student.name);
+  //     }
+  //     await api.getBook(catalogId);
+  //     const { issues: activeIssues } = await api.getActiveIssues(token);
+  //     const limitErr = validateStudentCanIssue(activeIssues, student.studentId, catalogId);
+  //     if (limitErr) {
+  //       showAlert('Issue not allowed', limitErr);
+  //       return;
+  //     }
+  //     await api.issueBook(token, {
+  //       bookId: catalogId,
+  //       studentId: student.studentId,
+  //       studentName: student.name,
+  //     });
+  //     setIssueBookId('');
+  //     setIssueStudentIdNo('');
+  //     setIssueStudentName('');
+  //     await refresh();
+  //     showAlert('Success', `Book issued to ${student.name} (${student.studentId})`);
+  //   } catch (e) {
+  //     showAlert('Issue failed', e instanceof Error ? e.message : 'Could not issue book');
+  //   }
+  // };
+
+
   const issueBook = async () => {
     if (!token) return;
+    setIssueError(null);
+
     const catalogId = resolveBookCatalogId(issueBookId, books);
     const idNo = issueStudentIdNo.trim();
+
     if (!catalogId || !idNo) {
-      Alert.alert('Error', 'Book Catalog ID (or book #) and Student ID No are required');
+      const msg = 'Book Catalog ID (or book #) aur Student ID No dono zaroori hain';
+      setIssueError(msg);
+      showAlert('Error', msg);
       return;
     }
+
     if (students.length === 0) {
-      Alert.alert('Error', 'Pehle kam se kam ek student register karein — bina registration book issue nahi hogi');
+      const msg = 'Pehle kam se kam ek student register karein — bina registration book issue nahi hogi';
+      setIssueError(msg);
+      showAlert('Error', msg);
       return;
     }
+
     try {
       const { student } = await api.lookupStudentByIdNo(token, idNo);
       if (!issueStudentName.trim()) {
@@ -293,50 +364,67 @@ export default function TeacherScreen() {
       }
       await api.getBook(catalogId);
       const { issues: activeIssues } = await api.getActiveIssues(token);
+
       const limitErr = validateStudentCanIssue(activeIssues, student.studentId, catalogId);
       if (limitErr) {
-        Alert.alert('Issue not allowed', limitErr);
+        setIssueError(limitErr);
+        showAlert('Issue not allowed', limitErr);
         return;
       }
+
       await api.issueBook(token, {
         bookId: catalogId,
         studentId: student.studentId,
         studentName: student.name,
       });
+
       setIssueBookId('');
       setIssueStudentIdNo('');
       setIssueStudentName('');
+      setIssueError(null);
       await refresh();
-      Alert.alert('Success', `Book issued to ${student.name} (${student.studentId})`);
+      showAlert('Success', `Book issued to ${student.name} (${student.studentId})`);
     } catch (e) {
-      Alert.alert('Issue failed', e instanceof Error ? e.message : 'Could not issue book');
+      const msg = e instanceof Error ? e.message : 'Could not issue book';
+      setIssueError(msg);
+      showAlert('Issue failed', msg);
     }
   };
 
-  const deleteBook = async () => {
+  const startDeleteBook = async () => {
     if (!token) return;
     const catalogId = resolveBookCatalogId(deleteBookId, books);
     if (!catalogId) {
-      Alert.alert('Error', 'Enter Book Catalog ID or book # to delete');
+      showAlert('Error', 'Enter Book Catalog ID or book # to delete');
       return;
     }
     try {
       const { book } = await api.getBook(catalogId);
       const ok = await confirmAsync(
         'Delete book?',
-        `"${book.title}" (ID ${book.id})\n\nReturn all issued copies first. Excel/catalog books usually cannot be deleted — only teacher-added books.`,
-        { confirmLabel: 'Delete', destructive: true },
+        `"${book.title}" (ID ${book.id})\n\nPehle saari copies return karein. Sirf teacher-added books delete ho sakti hain.`,
+        { confirmLabel: 'Continue', destructive: true },
       );
       if (!ok) return;
-      const del = await api.deleteBook(token, catalogId);
-      await refresh();
+      setDeleteTarget({ id: catalogId, title: book.title });
+    } catch (e) {
+      showAlert('Error', e instanceof Error ? e.message : 'Book not found');
+    }
+  };
+
+  const confirmDeleteBook = async (password: string) => {
+    if (!token || !deleteTarget) return;
+    try {
+      const del = await api.deleteBook(token, deleteTarget.id, password);
+      setDeleteTarget(null);
       setDeleteBookId('');
-      Alert.alert(
+      await refresh();
+      showAlert(
         del.sheetWarning ? 'Deleted (Excel pending)' : 'Deleted',
-        del.sheetWarning || 'Book removed from MongoDB & Excel',
+        del.sheetWarning || 'Book remove ho gayi',
       );
     } catch (e) {
-      Alert.alert('Delete failed', e instanceof Error ? e.message : 'Could not delete book');
+      showAlert('Delete failed', e instanceof Error ? e.message : 'Could not delete book');
     }
   };
 
@@ -350,10 +438,22 @@ export default function TeacherScreen() {
       contentContainerStyle={FormStyles.page}
       refreshControl={<RefreshControl refreshing={loadingStudents} onRefresh={() => loadStudents()} />}>
       <PageHeader
-        badge="Teacher"
-        title={`Welcome, ${teacher?.name}`}
-        subtitle={`ID: ${teacher?.teacherId}`}
+        badge="Professor"
+        title={`Welcome, ${teacher?.name ?? 'Staff'}`}
+        subtitle={`ID: ${teacher?.teacherId ?? '—'}`}
       />
+
+      {teacher ? (
+        <View style={styles.profileBox}>
+          <ThemedText style={FormStyles.bodyText}>
+            Mobile: {teacher.mobile || '—'} · Dept: {teacher.department || '—'}
+          </ThemedText>
+          <ThemedText style={FormStyles.bodyText}>Incharge: {teacher.inCharge || '—'}</ThemedText>
+          <ThemedText style={styles.profileHint}>
+            Only the Dean can edit a professor’s profile — professors cannot change their own information.
+          </ThemedText>
+        </View>
+      ) : null}
 
       {syncBanner ? (
         <View style={styles.syncBanner}>
@@ -454,8 +554,8 @@ export default function TeacherScreen() {
           {...inputProps}
         />
         <ThemedText style={FormStyles.hint}>
-          Bina student registration ke issue nahi hogi. ID No likhein (User ID nahi). Ek student
-          maximum {MAX_STUDENT_ACTIVE_ISSUES} books; ek hi book dobara issue nahi.
+          Books cannot be issued without student registration. Enter the ID No. (not the User ID).
+          A student can issue a maximum of {MAX_STUDENT_ACTIVE_ISSUES} books, and the same book cannot be issued again.
         </ThemedText>
         <ThemedText style={FormStyles.label}>Student ID No * (enrollment / roll)</ThemedText>
         <TextInput
@@ -470,8 +570,13 @@ export default function TeacherScreen() {
           <ThemedText style={FormStyles.bodyText}>✓ Registered: {issueStudentName}</ThemedText>
         ) : issueStudentIdNo.trim() ? (
           <ThemedText style={[FormStyles.hint, { color: '#b91c1c' }]}>
-            Student not found — register karein ya sahi ID No likhein
+     Student not found — please register the student or enter the correct ID Number.
           </ThemedText>
+        ) : null}
+        {issueError ? (
+          <View style={styles.issueErrorBanner}>
+            <ThemedText style={styles.issueErrorText}>{issueError}</ThemedText>
+          </View>
         ) : null}
         <Pressable style={styles.btn} onPress={issueBook}>
           <ThemedText style={styles.btnText}>Issue Book to Student</ThemedText>
@@ -481,7 +586,7 @@ export default function TeacherScreen() {
       <View style={FormStyles.card}>
         <ThemedText style={FormStyles.cardTitle}>🗑️ Manage / Delete Book</ThemedText>
         <ThemedText style={FormStyles.hint}>
-          Delete uses its own Catalog ID. Return all issued copies before delete.
+      Your password is required to delete the account. Please return all issued book copies first.
         </ThemedText>
         <ThemedText style={FormStyles.label}>Book Catalog ID to delete *</ThemedText>
         <TextInput
@@ -490,10 +595,20 @@ export default function TeacherScreen() {
           onChangeText={setDeleteBookId}
           {...inputProps}
         />
-        <Pressable style={styles.btnDanger} onPress={deleteBook}>
+        <Pressable style={styles.btnDanger} onPress={startDeleteBook}>
           <ThemedText style={styles.btnText}>Delete Book</ThemedText>
         </Pressable>
       </View>
+
+      <TeacherReturnPasswordModal
+        visible={Boolean(deleteTarget)}
+        bookTitle={deleteTarget?.title}
+        title="Book delete — password"
+        subtitle="Enter your Professor/Dean password to remove the book."
+        confirmLabel="Delete book"
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDeleteBook}
+      />
 
       <Pressable style={styles.logout} onPress={logout}>
         <ThemedText style={styles.logoutText}>Logout</ThemedText>

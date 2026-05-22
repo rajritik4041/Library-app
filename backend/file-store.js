@@ -3,8 +3,8 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { assertStudentCanIssueInFile } from './issue-limits.js';
 import bcrypt from 'bcryptjs';
+import { assertStudentCanIssueInFile } from './issue-limits.js';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -240,27 +240,165 @@ export function writeIssues(issues) {
   fs.writeFileSync(ISSUES_PATH, JSON.stringify(issues, null, 2));
 }
 
-let teacherPasswordHash = null;
+const TEACHERS_PATH = path.join(DATA_DIR, 'teachers.json');
+const DEANS_PATH = path.join(DATA_DIR, 'deans.json');
 
-export async function initFileTeacher(env) {
-  const password = env.DEFAULT_TEACHER_PASSWORD || 'teacher123';
-  teacherPasswordHash = await bcrypt.hash(password, 10);
-  console.log(`File mode teacher: ${(env.DEFAULT_TEACHER_ID || 'T001').toUpperCase()} / ${password}`);
+function readTeachers() {
+  ensureDataDir();
+  if (!fs.existsSync(TEACHERS_PATH)) {
+    return [];
+  }
+  return JSON.parse(fs.readFileSync(TEACHERS_PATH, 'utf8'));
 }
 
-export async function verifyFileTeacher(teacherId, password, env) {
-  const id = (env.DEFAULT_TEACHER_ID || 'T001').toUpperCase();
-  if (String(teacherId).toUpperCase() !== id) {
-    return null;
+function writeTeachers(teachers) {
+  ensureDataDir();
+  fs.writeFileSync(TEACHERS_PATH, JSON.stringify(teachers, null, 2));
+}
+
+function readDeans() {
+  ensureDataDir();
+  if (!fs.existsSync(DEANS_PATH)) {
+    return [];
   }
-  const ok = await bcrypt.compare(password, teacherPasswordHash);
-  if (!ok) {
-    return null;
-  }
+  return JSON.parse(fs.readFileSync(DEANS_PATH, 'utf8'));
+}
+
+function writeDeans(deans) {
+  ensureDataDir();
+  fs.writeFileSync(DEANS_PATH, JSON.stringify(deans, null, 2));
+}
+
+export function teacherPublicRow(t) {
   return {
-    teacherId: id,
-    name: env.DEFAULT_TEACHER_NAME || 'Library Teacher',
+    teacherId: t.teacherId,
+    name: t.name,
+    mobile: t.mobile || '',
+    department: t.department || '',
+    inCharge: t.inCharge || '',
+    createdAt: t.createdAt,
   };
+}
+
+export async function initFileStaff(env) {
+  let teachers = readTeachers();
+  if (teachers.length === 0) {
+    const password = env.DEFAULT_TEACHER_PASSWORD || 'teacher123';
+    const hash = await bcrypt.hash(password, 10);
+    const teacherId = (env.DEFAULT_TEACHER_ID || 'T001').toUpperCase();
+    teachers = [
+      {
+        teacherId,
+        passwordHash: hash,
+        name: env.DEFAULT_TEACHER_NAME || 'Library Teacher',
+        mobile: '',
+        department: '',
+        inCharge: '',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    writeTeachers(teachers);
+    console.log(`File mode teacher: ${teacherId} / ${password}`);
+  }
+
+  let deans = readDeans();
+  if (deans.length === 0) {
+    const password = env.DEFAULT_DEAN_PASSWORD || 'dean123';
+    const hash = await bcrypt.hash(password, 10);
+    const deanId = (env.DEFAULT_DEAN_ID || 'DEAN01').toUpperCase();
+    deans = [
+      {
+        deanId,
+        passwordHash: hash,
+        name: env.DEFAULT_DEAN_NAME || 'Dean Sir',
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    writeDeans(deans);
+    console.log(`File mode dean: ${deanId} / ${password}`);
+  }
+}
+
+/** @deprecated use initFileStaff */
+export async function initFileTeacher(env) {
+  return initFileStaff(env);
+}
+
+export async function verifyFileTeacher(teacherId, password) {
+  const id = String(teacherId).toUpperCase().trim();
+  const t = readTeachers().find((row) => row.teacherId === id);
+  if (!t) return null;
+  const ok = await bcrypt.compare(password, t.passwordHash);
+  if (!ok) return null;
+  return teacherPublicRow(t);
+}
+
+export async function verifyFileDean(deanId, password) {
+  const id = String(deanId).toUpperCase().trim();
+  const d = readDeans().find((row) => row.deanId === id);
+  if (!d) return null;
+  const ok = await bcrypt.compare(password, d.passwordHash);
+  if (!ok) return null;
+  return { deanId: d.deanId, name: d.name };
+}
+
+export function fileListTeachers() {
+  return readTeachers().map(teacherPublicRow);
+}
+
+export async function fileCreateTeacher({
+  teacherId,
+  password,
+  name,
+  mobile,
+  department,
+  inCharge,
+}) {
+  const teachers = readTeachers();
+  const id = String(teacherId).toUpperCase().trim();
+  if (teachers.some((t) => t.teacherId === id)) {
+    throw new Error('Teacher ID already exists');
+  }
+  const passwordHash = await bcrypt.hash(password, 10);
+  const row = {
+    teacherId: id,
+    passwordHash,
+    name: String(name).trim(),
+    mobile: String(mobile || '').trim(),
+    department: String(department || '').trim(),
+    inCharge: String(inCharge || '').trim(),
+    createdAt: new Date().toISOString(),
+  };
+  teachers.push(row);
+  writeTeachers(teachers);
+  return teacherPublicRow(row);
+}
+
+export async function fileUpdateTeacher(teacherId, updates) {
+  const teachers = readTeachers();
+  const id = String(teacherId).toUpperCase().trim();
+  const idx = teachers.findIndex((t) => t.teacherId === id);
+  if (idx < 0) throw new Error('Teacher not found');
+  const row = teachers[idx];
+  if (updates.name !== undefined) row.name = String(updates.name).trim();
+  if (updates.mobile !== undefined) row.mobile = String(updates.mobile).trim();
+  if (updates.department !== undefined) row.department = String(updates.department).trim();
+  if (updates.inCharge !== undefined) row.inCharge = String(updates.inCharge).trim();
+  if (updates.password) {
+    row.passwordHash = await bcrypt.hash(updates.password, 10);
+  }
+  teachers[idx] = row;
+  writeTeachers(teachers);
+  return teacherPublicRow(row);
+}
+
+export function fileDeleteTeacher(teacherId) {
+  const id = String(teacherId).toUpperCase().trim();
+  const teachers = readTeachers().filter((t) => t.teacherId !== id);
+  if (teachers.length === readTeachers().length) {
+    throw new Error('Teacher not found');
+  }
+  writeTeachers(teachers);
 }
 
 function issuedCountForCatalogId(catalogId, issues) {

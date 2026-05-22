@@ -14,7 +14,7 @@ import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { isLoading, isTeacher, isStudent } = useAuth();
+  const { isLoading, isTeacher, isDean, isStudent } = useAuth();
   const colors = useLibraryColors();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
@@ -88,6 +88,7 @@ export default function WelcomeScreen() {
       },
       studentIcon: { backgroundColor: c.accentSoft },
       teacherIcon: { backgroundColor: c.goldMuted },
+      deanIcon: { backgroundColor: '#e0e7ff' },
       roleEmoji: { fontSize: 28 },
       roleBody: { flex: 1, gap: 4 },
       roleTitle: { fontSize: 18, fontWeight: '800', color: c.ink },
@@ -106,9 +107,10 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (isTeacher) router.replace('/(tabs)/teacher');
+    if (isDean) router.replace('/(tabs)/dean');
+    else if (isTeacher) router.replace('/(tabs)/teacher');
     else if (isStudent) router.replace('/(tabs)/issued');
-  }, [isLoading, isTeacher, isStudent, router]);
+  }, [isLoading, isDean, isTeacher, isStudent, router]);
 
   if (isLoading) {
     return (
@@ -131,7 +133,7 @@ export default function WelcomeScreen() {
         <ThemedText style={styles.heroBadge}>{COLLEGE.libraryName}</ThemedText>
         <ThemedText style={styles.heroTitle}>Sign in</ThemedText>
         <ThemedText style={styles.heroSubtitle}>
-          Choose Student or Teacher to access library services
+        Student, Professor, or Dean — choose your role.
         </ThemedText>
       </LinearGradient>
 
@@ -159,9 +161,24 @@ export default function WelcomeScreen() {
           <ThemedText style={styles.roleEmoji}>👩‍🏫</ThemedText>
         </View>
         <View style={styles.roleBody}>
-          <ThemedText style={styles.roleTitle}>Teacher</ThemedText>
+          <ThemedText style={styles.roleTitle}>Professor</ThemedText>
           <ThemedText style={styles.roleDesc}>
-            Manage books, register students, issue and return books
+            Books can be issued/returned and students can be registered — users cannot edit their own profile.
+          </ThemedText>
+        </View>
+        <ThemedText style={styles.roleArrow}>→</ThemedText>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.roleCard, pressed && styles.roleCardPressed]}
+        onPress={() => router.push('/login-dean')}>
+        <View style={[styles.roleIcon, styles.deanIcon]}>
+          <ThemedText style={styles.roleEmoji}>🎓</ThemedText>
+        </View>
+        <View style={styles.roleBody}>
+          <ThemedText style={styles.roleTitle}>Dean</ThemedText>
+          <ThemedText style={styles.roleDesc}>
+          Create Teacher IDs with full access to the entire library system.
           </ThemedText>
         </View>
         <ThemedText style={styles.roleArrow}>→</ThemedText>

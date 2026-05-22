@@ -16,6 +16,9 @@ import { cardBorder, libraryElevation, webTypography } from '@/lib/platform-styl
 type TeacherReturnPasswordModalProps = {
   visible: boolean;
   bookTitle?: string;
+  title?: string;
+  subtitle?: string;
+  confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (password: string) => void | Promise<void>;
 };
@@ -23,6 +26,9 @@ type TeacherReturnPasswordModalProps = {
 export function TeacherReturnPasswordModal({
   visible,
   bookTitle,
+  title = 'Confirm book return',
+  subtitle = 'Enter your password before marking the book as returned — only then will the book appear back in the library.',
+  confirmLabel = 'Confirm return',
   onCancel,
   onConfirm,
 }: TeacherReturnPasswordModalProps) {
@@ -96,18 +102,15 @@ export function TeacherReturnPasswordModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={styles.overlay} onPress={onCancel}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-          <ThemedText style={styles.title}>Confirm book return</ThemedText>
-          <ThemedText style={styles.sub}>
-            Return mark karne se pehle apna teacher password daalein — tab hi book library mein
-            wapas dikhegi.
-          </ThemedText>
+          <ThemedText style={styles.title}>{title}</ThemedText>
+          <ThemedText style={styles.sub}>{subtitle}</ThemedText>
           {bookTitle ? (
             <ThemedText style={styles.book} numberOfLines={2}>
               {bookTitle}
             </ThemedText>
           ) : null}
           <TextInput
-            placeholder="Teacher password"
+            placeholder="Password"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -130,7 +133,7 @@ export function TeacherReturnPasswordModal({
               onPress={() => void submit()}
               disabled={submitting || !password.trim()}>
               <ThemedText style={styles.confirmText}>
-                {submitting ? 'Checking…' : 'Confirm return'}
+                {submitting ? 'Checking…' : confirmLabel}
               </ThemedText>
             </Pressable>
           </View>

@@ -102,7 +102,7 @@ export default function BooksScreen() {
   return (
     <ScreenShell>
       <PageHeader
-        badge={apiOnline ? 'MongoDB' : 'Offline'}
+        badge={apiOnline ? 'Database' : 'Offline'}
         title="Search Books"
         subtitle={`${books.length} books from database · ${loading ? 'Updating…' : 'Green = in library'}`}
       />

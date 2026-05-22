@@ -97,7 +97,7 @@ export default function DepartmentsScreen() {
   return (
     <ScreenShell>
       <PageHeader
-        badge={apiOnline ? 'MongoDB' : 'Offline'}
+        // badge={apiOnline ? 'MongoDB' : 'Offline'}
         title="Departments"
         subtitle="Books grouped by academic department — tap to open filtered search."
       />

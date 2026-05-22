@@ -4,7 +4,7 @@
 export const COLLEGE = {
   shortName: 'MCAET',
   fullName: 'Mahamaya College of Agricultural Engineering & Technology',
-  libraryName: 'MCAET Central Library',
+  libraryName: 'MCAET Library',
   appName: 'MCAET Library',
   tagline: 'Akbarpur, Ambedkar Nagar',
   pincode: '224122',
@@ -45,7 +45,7 @@ export const COLLEGE_HIGHLIGHTS = [
   },
   {
     emoji: '📚',
-    title: 'Central Library',
+    title: 'Mcaet Library',
     desc: 'Digital catalog, rack search & book issue management',
   },
 ] as const;
