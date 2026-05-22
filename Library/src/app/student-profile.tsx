@@ -126,7 +126,7 @@ export default function StudentProfileScreen() {
       </View>
 
       <Pressable onPress={() => router.back()}>
-        <ThemedText style={styles.back}>← Back</ThemedText>
+        <ThemedText style={styles.back}> ← Back</ThemedText>
       </Pressable>
     </ScrollView>
   );

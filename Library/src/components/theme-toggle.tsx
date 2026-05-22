@@ -45,7 +45,7 @@ export function ThemeToggle({ onDark = false, compact = false }: ThemeToggleProp
       accessibilityRole="button"
       accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       style={({ pressed }) => [styles.btn, pressed && styles.pressed]}>
-      <ThemedText style={styles.icon}>{isDark ? '☀️' : '🌙'}</ThemedText>
+      <ThemedText style={styles.icon}>{isDark ? '☀️' : '🌙'} </ThemedText>
       {!compact ? (
         <ThemedText style={styles.label}>{isDark ? 'Light' : 'Dark'}</ThemedText>
       ) : null}

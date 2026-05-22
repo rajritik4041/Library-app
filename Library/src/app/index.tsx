@@ -189,7 +189,7 @@ export default function CollegeHomeScreen() {
       <View style={styles.aboutCard}>
         <PageHeader
           title={`About ${COLLEGE.shortName}`}
-          subtitle={`Excellence in agricultural engineering education since ${COLLEGE.established}`}
+          subtitle={`Excellence  in agricultural engineering education since ${COLLEGE.established}`}
         />
         {COLLEGE_ABOUT.map((para) => (
           <ThemedText key={para.slice(0, 40)} style={styles.paragraph}>
