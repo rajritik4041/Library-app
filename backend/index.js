@@ -27,6 +27,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
 /** true = Excel catalog.json + JSON issues (Mongo optional) */
 let USE_FILE_MODE = false;
+/** Why FILE mode started (health / debugging) */
+let FILE_MODE_REASON = '';
 
 app.use(cors());
 app.use(express.json());
@@ -1416,23 +1418,67 @@ app.get('/api/stats', async (_req, res) => {
 });
 
 app.get('/api/health', async (_req, res) => {
-  const payload = { ok: true, mode: USE_FILE_MODE ? 'file' : 'mongodb' };
-  if (!USE_FILE_MODE) {
-    if (sheetSync.isSheetsSyncEnabled()) {
-      try {
-        payload.sync = await sheetSync.getSyncStatus(Book);
-      } catch (e) {
-        payload.sync = { enabled: true, error: e.message };
-      }
-    } else {
-      payload.sync = {
-        enabled: false,
-        sheetWriteOk: false,
-        hint:
-          'Render/.env par GOOGLE_SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY set karein — tabhi Excel↔Mongo sync chalegi.',
-      };
-    }
+  const mode = USE_FILE_MODE ? 'file' : 'mongodb';
+  const readyState = mongoose.connection.readyState;
+  const mongoConnected = readyState === 1;
+
+  const payload = {
+    ok: mode === 'mongodb' && mongoConnected,
+    mode,
+    storage:
+      mode === 'mongodb'
+        ? 'mongodb'
+        : 'server/data/*.json + src/data/catalog.json (FILE mode only)',
+    mongo: {
+      configured: Boolean(process.env.MONGODB_URI?.trim()),
+      connected: mongoConnected,
+      readyState,
+    },
+    hint:
+      mode === 'mongodb'
+        ? 'Live data from MongoDB — same URI on localhost and Render = same books/students'
+        : FILE_MODE_REASON ||
+          'Set MONGODB_URI in server/.env (copy from Render). USE_FILE_STORE=0. Then: npm run server',
+  };
+
+  if (mode === 'file') {
+    payload.warning =
+      'FILE mode — app MongoDB use nahi karega. Teacher save server/data mein, deploy se alag ho sakta hai.';
+    payload.ok = true;
+  } else if (!mongoConnected) {
+    payload.ok = false;
+    payload.mongo.error = 'MongoDB not connected';
+    return res.status(503).json(payload);
   }
+
+  try {
+    payload.counts = {
+      books: await Book.countDocuments(),
+      students: await Student.countDocuments(),
+      teachers: await Teacher.countDocuments(),
+      activeIssues: await Issue.countDocuments({ status: 'issued' }),
+    };
+  } catch (e) {
+    payload.ok = false;
+    payload.mongo.error = e.message;
+    return res.status(503).json(payload);
+  }
+
+  if (sheetSync.isSheetsSyncEnabled()) {
+    try {
+      payload.sync = await sheetSync.getSyncStatus(Book);
+    } catch (e) {
+      payload.sync = { enabled: true, error: e.message };
+    }
+  } else {
+    payload.sync = {
+      enabled: false,
+      sheetWriteOk: false,
+      hint:
+        'GOOGLE_SHEET_ID + service account in server/.env — tabhi Excel↔Mongo sync chalegi.',
+    };
+  }
+
   res.json(payload);
 });
 
@@ -1504,20 +1550,30 @@ app.post('/api/sync-catalog', authTeacher, async (_req, res) => {
 });
 
 async function start() {
-  const uri = process.env.MONGODB_URI ;
-  const forceFile =
-    process.env.USE_FILE_STORE === 'true' ||
-    process.env.USE_FILE_STORE === '1' ||
-    !uri?.trim();
+  const uri = (process.env.MONGODB_URI || '').trim();
+  const explicitFile =
+    process.env.USE_FILE_STORE === 'true' || process.env.USE_FILE_STORE === '1';
 
-  if (forceFile) {
+  if (explicitFile) {
     USE_FILE_MODE = true;
+    FILE_MODE_REASON = 'USE_FILE_STORE=1 in server/.env';
     await fileStore.initFileStaff(process.env);
+    console.warn('⚠ USE_FILE_STORE=1 — FILE mode (MongoDB disabled)');
+    console.log('FILE mode: Excel → ../src/data/catalog.json | issues → server/data/issues.json');
+  } else if (!uri) {
+    USE_FILE_MODE = true;
+    FILE_MODE_REASON = 'MONGODB_URI missing — copy server/.env.example → server/.env';
+    await fileStore.initFileStaff(process.env);
+    console.warn(
+      '⚠ MONGODB_URI khali — FILE mode. App sirf offline catalog dikhayegi.',
+    );
+    console.warn('   Fix: server/.env mein Render wala MONGODB_URI paste karein → npm run server');
     console.log('FILE mode: Excel → ../src/data/catalog.json | issues → server/data/issues.json');
   } else {
     try {
       await connectMongo(uri);
       USE_FILE_MODE = false;
+      FILE_MODE_REASON = '';
       console.log('MongoDB connected');
       await seedDean();
       await seedTeacher();
@@ -1552,14 +1608,19 @@ async function start() {
         }
       }
     } catch (e) {
-      console.warn('MongoDB connect failed → FILE mode:', e.message);
-      USE_FILE_MODE = true;
-      await fileStore.initFileStaff(process.env);
+      console.error('MongoDB connection failed — server start nahi hoga (FILE fallback band):');
+      console.error('  ', e.message);
+      console.error('  server/.env → MONGODB_URI = Render deploy wala same URI');
+      console.error('  Atlas Network Access → 0.0.0.0/0 ya apna IP allow karein');
+      process.exit(1);
     }
   }
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`API http://localhost:${PORT} | mode=${USE_FILE_MODE ? 'FILE' : 'MongoDB'}`);
+    if (!USE_FILE_MODE) {
+      console.log('Health: GET /api/health → mode=mongodb, counts.books, sync status');
+    }
   });
 }
 

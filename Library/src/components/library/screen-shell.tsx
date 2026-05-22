@@ -11,13 +11,24 @@ type ScreenShellProps = {
   scroll?: boolean;
   /** Center content vertically (welcome / login). */
   centered?: boolean;
+  /** Use below CollegeNavbar — skip duplicate status-bar inset. */
+  belowNavbar?: boolean;
 };
 
-export function ScreenShell({ children, scroll = true, centered = false }: ScreenShellProps) {
+export function ScreenShell({
+  children,
+  scroll = true,
+  centered = false,
+  belowNavbar = false,
+}: ScreenShellProps) {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const bottomPad = insets.bottom + BottomTabInset + Spacing.three;
-  const topPad = Platform.OS === 'web' ? WebHeaderInset + Spacing.two : insets.top + Spacing.three;
+  const topPad = belowNavbar
+    ? Spacing.three
+    : Platform.OS === 'web'
+      ? WebHeaderInset + Spacing.two
+      : insets.top + Spacing.three;
 
   const content = (
     <ThemedView

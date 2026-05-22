@@ -19,6 +19,7 @@ export default function WelcomeScreen() {
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       page: { flex: 1, backgroundColor: c.surface },
+      body: { flex: 1, minHeight: 0 },
       loading: {
         flex: 1,
         alignItems: 'center',
@@ -123,7 +124,8 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.page}>
       <CollegeNavbar active="library" />
-      <ScreenShell scroll={false} centered>
+      <View style={styles.body}>
+      <ScreenShell scroll belowNavbar>
       <View style={styles.content}>
       <LinearGradient
         colors={[colors.navy, colors.navyMid, colors.navyLight]}
@@ -193,6 +195,7 @@ export default function WelcomeScreen() {
       </Pressable>
       </View>
       </ScreenShell>
+      </View>
     </View>
   );
 }

@@ -71,9 +71,11 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
 
       if (mode !== 'mongodb') {
         setApiOnline(false);
-        setError(
-          `MongoDB mode nahi (${API_URL}). server/.env mein MONGODB_URI set karein, phir: npm run server`,
-        );
+        const hint =
+          health.hint ||
+          health.warning ||
+          'server/.env → MONGODB_URI (Render wala same URI), USE_FILE_STORE=0';
+        setError(`MongoDB mode nahi (${API_URL}). ${hint}`);
         const cached = getLocalApiBooks().map(enrichApiBook);
         if (cached.length > 0) {
           setBooks(cached);

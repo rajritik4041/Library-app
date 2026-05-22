@@ -51,12 +51,30 @@ export const api = {
     request<{
       ok: boolean;
       mode?: 'mongodb' | 'file';
+      storage?: string;
+      hint?: string;
+      warning?: string;
+      mongo?: {
+        configured?: boolean;
+        connected?: boolean;
+        readyState?: number;
+        error?: string;
+      };
+      counts?: {
+        books: number;
+        students: number;
+        teachers: number;
+        activeIssues: number;
+      };
       sync?: {
         sheetCount: number;
         mongoCount: number;
         inSync: boolean;
         sheetWriteOk?: boolean;
         sheetWriteError?: string;
+        enabled?: boolean;
+        hint?: string;
+        error?: string;
       };
     }>('/api/health'),
 

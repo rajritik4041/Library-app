@@ -24,6 +24,7 @@ export default function CollegeHomeScreen() {
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       page: { flex: 1, backgroundColor: c.surface },
+      body: { flex: 1, minHeight: 0 },
       hero: {
         borderRadius: Radius.xl,
         padding: Spacing.five,
@@ -171,7 +172,8 @@ export default function CollegeHomeScreen() {
   return (
     <View style={styles.page}>
       <CollegeNavbar active="home" />
-      <ScreenShell>
+      <View style={styles.body}>
+      <ScreenShell belowNavbar>
       <LinearGradient
         colors={[colors.navy, colors.navyMid, colors.navyLight]}
         start={{ x: 0, y: 0 }}
@@ -244,6 +246,7 @@ export default function CollegeHomeScreen() {
         </Pressable>
       ) : null}
       </ScreenShell>
+      </View>
     </View>
   );
 }

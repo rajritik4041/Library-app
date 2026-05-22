@@ -44,7 +44,23 @@ const TIMINGS = [
 // ];
 
 export default function AboutScreen() {
-  const { stats, apiOnline, dataSource, refresh } = useBooksApi();
+  const { stats, apiOnline, apiMode, dataSource, refresh } = useBooksApi();
+  const [healthHint, setHealthHint] = React.useState<string | null>(null);
+  const [serverBooks, setServerBooks] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    void (async () => {
+      try {
+        const { api } = await import('@/services/api');
+        const h = await api.health();
+        setHealthHint(h.hint || h.warning || null);
+        setServerBooks(h.counts?.books ?? null);
+      } catch {
+        setHealthHint(null);
+        setServerBooks(null);
+      }
+    })();
+  }, [apiOnline, dataSource]);
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       card: {
@@ -112,16 +128,33 @@ export default function AboutScreen() {
         <ThemedText style={styles.cardTitle}>Live catalog
            {/* (MongoDB) */}
            </ThemedText>
-        <DetailRow label="Data source" value={dataSource === 'mongodb' ? 'Database' : 'Offline cache'} />
-        {/* <DetailRow label="API server" value={API_URL} /> */}
+        <DetailRow
+          label="Data source"
+          value={
+            dataSource === 'mongodb'
+              ? 'MongoDB (live)'
+              : dataSource === 'offline-cache'
+                ? 'Offline cache'
+                : 'None'
+          }
+        />
+        <DetailRow label="API server" value={API_URL} />
+        <DetailRow
+          label="Server mode"
+          value={apiMode === 'mongodb' ? 'mongodb ✓' : apiMode === 'file' ? 'file (fix .env)' : 'unknown'}
+        />
+        {serverBooks != null ? (
+          <DetailRow label="MongoDB books" value={String(serverBooks)} />
+        ) : null}
         <DetailRow
           label="Sync"
           value={
             apiOnline
-              ? 'Live — add/delete ~12 sec par sab devices par'
-              : 'Offline — internet / server check karein'
+              ? 'Live — save MongoDB + Sheet (~12s refresh)'
+              : 'Offline — npm run server + MONGODB_URI check'
           }
         />
+        {healthHint ? <DetailRow label="Server hint" value={healthHint} /> : null}
         <DetailRow label="Book titles" value={String(stats.totalTitles)} />
         <DetailRow label="Total copies" value={String(stats.totalCopies)} />
         <DetailRow label="Available now" value={String(stats.availableCopies)} />
