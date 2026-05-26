@@ -1,21 +1,22 @@
 import { Alert, Platform } from 'react-native';
 
+import { enqueueConfirm } from '@/lib/app-dialog-queue';
+import { restoreWebPointerEvents } from '@/lib/web-focus';
+
 /**
- * Cross-platform confirm. On web, Alert.alert often ignores button onPress — use window.confirm.
+ * Cross-platform confirm. On web/Electron use in-app modal — window.confirm breaks TextInput focus.
  */
 export function confirmAsync(
   title: string,
   message: string,
   options?: { confirmLabel?: string; destructive?: boolean },
 ): Promise<boolean> {
-  const confirmLabel = options?.confirmLabel ?? 'OK';
-
-  if (Platform.OS === 'web' && typeof globalThis !== 'undefined') {
-    const w = globalThis as typeof globalThis & { confirm?: (msg: string) => boolean };
-    if (typeof w.confirm === 'function') {
-      return Promise.resolve(w.confirm(`${title}\n\n${message}`));
-    }
+  if (Platform.OS === 'web') {
+    restoreWebPointerEvents();
+    return enqueueConfirm(title, message, options);
   }
+
+  const confirmLabel = options?.confirmLabel ?? 'OK';
 
   return new Promise((resolve) => {
     Alert.alert(

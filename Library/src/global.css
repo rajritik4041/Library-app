@@ -58,6 +58,11 @@ input[type='password'] {
   cursor: text;
 }
 
+body,
+#root {
+  pointer-events: auto;
+}
+
 :root {
   --font-display:
     'Segoe UI', Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,

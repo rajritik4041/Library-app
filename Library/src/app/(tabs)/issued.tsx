@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { PageHeader } from '@/components/library/page-header';
 import { SearchBar } from '@/components/library/search-bar';
@@ -11,6 +11,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { resolveIssueBookRack } from '@/lib/book-catalog-fields';
 import { filterIssuesByQuery } from '@/lib/filter-issues';
+import { showAlert } from '@/lib/show-alert';
 import { api } from '@/services/api';
 import type { ApiIssue } from '@/types/api';
 
@@ -113,7 +114,7 @@ export default function IssuedScreen() {
         : await api.getActiveIssues(token);
       setIssues(data.issues);
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Failed to load');
+      showAlert('Error', e instanceof Error ? e.message : 'Failed to load');
     } finally {
       setLoading(false);
     }
@@ -134,9 +135,9 @@ export default function IssuedScreen() {
       await api.returnBook(token, returnIssue.id, password);
       setReturnIssue(null);
       await load();
-      Alert.alert('Success', 'Book returned to library');
+      showAlert('Success', 'Book returned to library');
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Return failed');
+      showAlert('Error', e instanceof Error ? e.message : 'Return failed');
     }
   };
 

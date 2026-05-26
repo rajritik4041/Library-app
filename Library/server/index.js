@@ -1143,7 +1143,7 @@ app.put('/api/books/:catalogId', authTeacher, async (req, res) => {
   }
 });
 
-app.delete('/api/books/:catalogId', authTeacher, async (req, res) => {
+async function handleDeleteBook(req, res) {
   try {
     const { password } = req.body;
     if (!password) {
@@ -1184,7 +1184,11 @@ app.delete('/api/books/:catalogId', authTeacher, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: err.message || 'Failed to delete book' });
   }
-});
+}
+
+/** POST preferred: Electron/desktop fetch often drops DELETE request bodies */
+app.post('/api/books/:catalogId/delete', authTeacher, handleDeleteBook);
+app.delete('/api/books/:catalogId', authTeacher, handleDeleteBook);
 
 // ——— Issues ———
 app.get('/api/issues/mine', authStudent, async (req, res) => {

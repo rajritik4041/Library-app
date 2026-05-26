@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { AppDialogHost } from '@/components/ui/app-dialog-host';
 import { AuthProvider } from '@/context/auth-context';
 import { BooksApiProvider } from '@/context/books-api-context';
 import { ThemePreferenceProvider } from '@/context/theme-preference-context';
@@ -46,6 +47,7 @@ export default function RootLayout() {
       <AuthProvider>
         <BooksApiProvider>
           <RootStack />
+          <AppDialogHost />
         </BooksApiProvider>
       </AuthProvider>
     </ThemePreferenceProvider>

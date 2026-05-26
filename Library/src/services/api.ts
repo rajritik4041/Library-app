@@ -37,6 +37,11 @@ async function request<T>(
         'Book edit is not enabled on this server — deploy the latest backend (Render redeploy).',
       );
     }
+    if (/Cannot POST \/api\/books.*\/delete/i.test(text)) {
+      throw new Error(
+        'Book delete is not enabled on this server — deploy the latest backend (Render redeploy), then rebuild the desktop app.',
+      );
+    }
   }
   if (!response.ok) {
     throw new Error(
@@ -296,11 +301,12 @@ export const api = {
       },
     ),
 
+  /** POST (not DELETE): desktop/Electron fetch often strips DELETE bodies — password never reaches API */
   deleteBook: (token: string, catalogId: string, password: string) =>
     request<{ ok: boolean; sheetWarning?: string }>(
-      `/api/books/${encodeURIComponent(String(catalogId).trim())}`,
+      `/api/books/${encodeURIComponent(String(catalogId).trim())}/delete`,
       {
-        method: 'DELETE',
+        method: 'POST',
         token,
         body: JSON.stringify({ password }),
       },
