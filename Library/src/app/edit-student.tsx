@@ -1,11 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { FormField } from '@/components/form/form-field';
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { Radius, Spacing } from '@/constants/theme';
+import { useFieldFeedback } from '@/hooks/use-field-feedback';
 import { useFormStyles } from '@/hooks/use-form-styles';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
@@ -17,10 +19,10 @@ export default function EditStudentScreen() {
   const lookupKey = (Array.isArray(params.key) ? params.key[0] : params.key)?.trim() || '';
   const { token, isStaff } = useAuth();
   const router = useRouter();
-  const { styles: FormStyles, colors: FormColors } = useFormStyles();
+  const { styles: FormStyles, colors } = useFormStyles();
+  const fields = useFieldFeedback();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
-      fieldWrap: { width: '100%' },
       btn: {
         backgroundColor: c.navy,
         padding: Spacing.three,
@@ -42,6 +44,12 @@ export default function EditStudentScreen() {
         fontWeight: '600',
         textAlign: 'center',
         width: '100%',
+      },
+      banner: {
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: Spacing.two,
       },
     }),
   );
@@ -74,8 +82,8 @@ export default function EditStudentScreen() {
       setYear(student.year);
       setDepartment(student.department);
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Student not found');
-      goTeacher();
+      fields.showMessage('_form', false, e instanceof Error ? e.message : 'Student not found');
+      setTimeout(goTeacher, 2500);
     } finally {
       setLoading(false);
     }
@@ -83,7 +91,6 @@ export default function EditStudentScreen() {
 
   useEffect(() => {
     if (!lookupKey) {
-      Alert.alert('Error', 'No student selected');
       goTeacher();
       return;
     }
@@ -101,20 +108,39 @@ export default function EditStudentScreen() {
     );
   }
 
+  const bind = (
+    key: string,
+    kind: Parameters<typeof fields.validateOnBlur>[1],
+    value: string,
+    set: (v: string) => void,
+    required = true,
+  ) => ({
+    kind,
+    value,
+    onChangeText: set,
+    feedback: fields.get(key),
+    onBlur: () => fields.validateOnBlur(key, kind, value, { required }),
+    onChangeValidate: (v: string) =>
+      fields.validateOnChange(key, kind, v, { required }),
+  });
+
   const onSave = async () => {
     if (!lookupKey || !studentIdNo) return;
-    if (
-      !userId.trim() ||
-      !name.trim() ||
-      !mobile.trim() ||
-      !course.trim() ||
-      !year.trim() ||
-      !department.trim()
-    ) {
-      Alert.alert('Error', 'Name, User ID, mobile, course, grade, and department are required');
-      return;
+    const checks: Parameters<typeof fields.validateAll>[0] = [
+      { key: 'userId', kind: 'username', value: userId },
+      { key: 'name', kind: 'name', value: name },
+      { key: 'mobile', kind: 'mobile', value: mobile },
+      { key: 'course', kind: 'course', value: course },
+      { key: 'year', kind: 'year', value: year },
+      { key: 'department', kind: 'department', value: department },
+    ];
+    if (password.trim()) {
+      checks.push({ key: 'password', kind: 'passwordOptional', value: password });
     }
+    if (!fields.validateAll(checks)) return;
+
     setSaving(true);
+    fields.hide('_form');
     try {
       await api.updateStudent(token, lookupKey, {
         userId: userId.trim(),
@@ -126,9 +152,10 @@ export default function EditStudentScreen() {
         department: department.trim(),
         ...(password ? { password } : {}),
       });
-      Alert.alert('Saved', 'Student updated successfully', [{ text: 'OK', onPress: goTeacher }]);
+      fields.showMessage('_form', true, 'Student updated successfully');
+      setTimeout(goTeacher, 2000);
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Update failed');
+      fields.showMessage('_form', false, e instanceof Error ? e.message : 'Update failed');
     } finally {
       setSaving(false);
     }
@@ -144,34 +171,14 @@ export default function EditStudentScreen() {
     if (!ok) return;
     try {
       await api.deleteStudent(token, lookupKey);
-      Alert.alert('Deleted', 'Student removed', [{ text: 'OK', onPress: goTeacher }]);
+      fields.showMessage('_form', true, 'Student removed');
+      setTimeout(goTeacher, 2000);
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Delete failed');
+      fields.showMessage('_form', false, e instanceof Error ? e.message : 'Delete failed');
     }
   };
 
-  const field = (
-    label: string,
-    value: string,
-    set: (v: string) => void,
-    placeholder: string,
-    opts?: { secure?: boolean; caps?: boolean; phone?: boolean; editable?: boolean },
-  ) => (
-    <View key={label} style={styles.fieldWrap}>
-      <ThemedText style={FormStyles.label}>{label}</ThemedText>
-      <TextInput
-        value={value}
-        onChangeText={set}
-        placeholder={placeholder}
-        editable={opts?.editable !== false}
-        secureTextEntry={opts?.secure}
-        autoCapitalize={opts?.caps ? 'characters' : 'none'}
-        keyboardType={opts?.phone ? 'phone-pad' : 'default'}
-        placeholderTextColor={FormColors.inputPlaceholder}
-        style={[FormStyles.input, opts?.editable === false && FormStyles.inputDisabled]}
-      />
-    </View>
-  );
+  const formBanner = fields.get('_form');
 
   if (loading) {
     return (
@@ -190,14 +197,40 @@ export default function EditStudentScreen() {
       />
 
       <View style={FormStyles.card}>
-        {field('Student ID No', studentIdNo, () => {}, studentIdNo, { editable: false })}
-        {field('Student User ID (login) *', userId, setUserId, 'Unique login ID', { caps: true })}
-        {field('Full name *', name, setName, 'Required')}
-        {field('Mobile No *', mobile, setMobile, '10-digit mobile', { phone: true })}
-        {field('Course *', course, setCourse, 'e.g. B.Tech')}
-        {field('Grade / Year *', year, setYear, 'e.g. 1, 2, 3')}
-        {field('Department *', department, setDepartment, 'e.g. CSE')}
-        {field('New password', password, setPassword, 'Leave blank to keep current', { secure: true })}
+        <FormField
+          label="Student ID No"
+          value={studentIdNo}
+          onChangeText={() => {}}
+          kind="studentId"
+          editable={false}
+        />
+        <FormField
+          label="Student User ID (login) *"
+          placeholder="Unique login ID"
+          autoCapitalize="characters"
+          {...bind('userId', 'username', userId, setUserId)}
+        />
+        <FormField label="Full name *" placeholder="Required" {...bind('name', 'name', name, setName)} />
+        <FormField
+          label="Mobile No *"
+          placeholder="10-digit mobile"
+          keyboardType="phone-pad"
+          {...bind('mobile', 'mobile', mobile, setMobile)}
+        />
+        <FormField label="Course *" placeholder="e.g. B.Tech" {...bind('course', 'course', course, setCourse)} />
+        <FormField label="Grade / Year *" placeholder="e.g. 1, 2, 3" {...bind('year', 'year', year, setYear)} />
+        <FormField
+          label="Department *"
+          placeholder="e.g. CSE"
+          autoCapitalize="characters"
+          {...bind('department', 'department', department, setDepartment)}
+        />
+        <FormField
+          label="New password"
+          placeholder="Leave blank to keep current"
+          secureTextEntry
+          {...bind('password', 'passwordOptional', password, setPassword, false)}
+        />
 
         <Pressable style={styles.btn} onPress={onSave} disabled={saving}>
           <ThemedText style={styles.btnText}>{saving ? 'Saving…' : 'Save Student Account'}</ThemedText>
@@ -205,6 +238,16 @@ export default function EditStudentScreen() {
         <Pressable style={styles.btnDanger} onPress={onDelete}>
           <ThemedText style={styles.btnText}>Delete Student</ThemedText>
         </Pressable>
+
+        {formBanner?.message ? (
+          <ThemedText
+            style={[
+              styles.banner,
+              { color: formBanner.valid ? colors.success : colors.danger },
+            ]}>
+            {formBanner.message}
+          </ThemedText>
+        ) : null}
       </View>
 
       <Pressable onPress={goTeacher}>

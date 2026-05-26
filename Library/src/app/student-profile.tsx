@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { FormField } from '@/components/form/form-field';
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { Radius, Spacing } from '@/constants/theme';
+import { useFieldFeedback } from '@/hooks/use-field-feedback';
 import { useFormStyles } from '@/hooks/use-form-styles';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
@@ -13,7 +15,8 @@ import { api } from '@/services/api';
 export default function StudentProfileScreen() {
   const { token, isStudent, student, updateStudentSession } = useAuth();
   const router = useRouter();
-  const { styles: FormStyles, colors: FormColors } = useFormStyles();
+  const { styles: FormStyles, colors } = useFormStyles();
+  const fields = useFieldFeedback();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       centered: { flexGrow: 1, padding: Spacing.four, justifyContent: 'center', gap: Spacing.three },
@@ -42,6 +45,12 @@ export default function StudentProfileScreen() {
       },
       btnText: { color: '#fff', fontWeight: '800' },
       back: { color: c.accent, fontWeight: '600', textAlign: 'center' },
+      banner: {
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: Spacing.two,
+      },
     }),
   );
   const [name, setName] = useState(student?.name ?? '');
@@ -60,8 +69,34 @@ export default function StudentProfileScreen() {
     );
   }
 
+  const bind = (
+    key: string,
+    kind: Parameters<typeof fields.validateOnBlur>[1],
+    value: string,
+    set: (v: string) => void,
+    required = true,
+  ) => ({
+    kind,
+    value,
+    onChangeText: set,
+    feedback: fields.get(key),
+    onBlur: () => fields.validateOnBlur(key, kind, value, { required }),
+    onChangeValidate: (v: string) =>
+      fields.validateOnChange(key, kind, v, { required }),
+  });
+
   const onSave = async () => {
+    const checks: Parameters<typeof fields.validateAll>[0] = [
+      { key: 'name', kind: 'name', value: name },
+      { key: 'mobile', kind: 'mobile', value: mobile },
+    ];
+    if (password.trim()) {
+      checks.push({ key: 'password', kind: 'passwordOptional', value: password });
+    }
+    if (!fields.validateAll(checks)) return;
+
     setLoading(true);
+    fields.hide('_form');
     try {
       const { student: updated } = await api.updateMyProfile(token, {
         name: name.trim(),
@@ -70,13 +105,15 @@ export default function StudentProfileScreen() {
       });
       await updateStudentSession(updated);
       setPassword('');
-      Alert.alert('Saved', 'Your profile has been updated');
+      fields.showMessage('_form', true, 'Your profile has been updated');
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Update failed');
+      fields.showMessage('_form', false, e instanceof Error ? e.message : 'Update failed');
     } finally {
       setLoading(false);
     }
   };
+
+  const formBanner = fields.get('_form');
 
   return (
     <ScrollView contentContainerStyle={FormStyles.page}>
@@ -96,33 +133,32 @@ export default function StudentProfileScreen() {
       </View>
 
       <View style={styles.card}>
-        <ThemedText style={FormStyles.label}>Full name</ThemedText>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          style={FormStyles.input}
-          placeholderTextColor={FormColors.inputPlaceholder}
-        />
-        <ThemedText style={FormStyles.label}>Mobile number</ThemedText>
-        <TextInput
-          value={mobile}
-          onChangeText={setMobile}
+        <FormField label="Full name" placeholder="Your name" {...bind('name', 'name', name, setName)} />
+        <FormField
+          label="Mobile number"
+          placeholder="10-digit mobile"
           keyboardType="phone-pad"
-          style={FormStyles.input}
-          placeholderTextColor={FormColors.inputPlaceholder}
+          {...bind('mobile', 'mobile', mobile, setMobile)}
         />
-        <ThemedText style={FormStyles.label}>New password</ThemedText>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+        <FormField
+          label="New password"
           placeholder="Leave blank to keep current"
-          placeholderTextColor={FormColors.inputPlaceholder}
-          style={FormStyles.input}
+          secureTextEntry
+          {...bind('password', 'passwordOptional', password, setPassword, false)}
         />
         <Pressable style={styles.btn} onPress={onSave} disabled={loading}>
           <ThemedText style={styles.btnText}>{loading ? 'Saving…' : 'Save'}</ThemedText>
         </Pressable>
+
+        {formBanner?.message ? (
+          <ThemedText
+            style={[
+              styles.banner,
+              { color: formBanner.valid ? colors.success : colors.danger },
+            ]}>
+            {formBanner.message}
+          </ThemedText>
+        ) : null}
       </View>
 
       <Pressable onPress={() => router.back()}>

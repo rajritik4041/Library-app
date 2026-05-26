@@ -81,7 +81,7 @@
 // }
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { LoginForm } from '@/components/auth/login-form';
 import { PageHeader } from '@/components/library/page-header';
@@ -98,7 +98,7 @@ export default function TeacherLoginScreen() {
   const [teacherId, setTeacherId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
@@ -108,39 +108,18 @@ export default function TeacherLoginScreen() {
         textAlign: 'center',
         marginTop: Spacing.four,
       },
-
-      errorBox: {
-        backgroundColor: 'rgba(255,0,0,0.08)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,0,0,0.25)',
-        padding: Spacing.three,
-        borderRadius: 12,
-        marginTop: Spacing.three,
-      },
-
-      errorText: {
-        color: '#ff4d4f',
-        fontWeight: '600',
-        textAlign: 'center',
-      },
     }),
   );
 
   const onLogin = async () => {
-    setError('');
-
-    if (!teacherId.trim() || !password) {
-      setError('Enter Professor ID and password.');
-      return;
-    }
-
+    setSubmitError('');
     setLoading(true);
 
     try {
       await loginTeacher(teacherId, password);
       router.replace('/(tabs)/teacher' as const);
     } catch (e) {
-      setError(
+      setSubmitError(
         e instanceof Error
           ? e.message
           : 'Login failed. Please try again.',
@@ -161,6 +140,8 @@ export default function TeacherLoginScreen() {
       <LoginForm
         fields={[
           {
+            key: 'teacherId',
+            kind: 'teacherId',
             label: 'Professor ID',
             value: teacherId,
             onChangeText: setTeacherId,
@@ -168,6 +149,8 @@ export default function TeacherLoginScreen() {
             autoCapitalize: 'characters',
           },
           {
+            key: 'password',
+            kind: 'password',
             label: 'Password',
             value: password,
             onChangeText: setPassword,
@@ -177,13 +160,8 @@ export default function TeacherLoginScreen() {
         ]}
         onSubmit={onLogin}
         loading={loading}
+        submitError={submitError}
       />
-
-      {!!error && (
-        <View style={styles.errorBox}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        </View>
-      )}
 
       <Pressable onPress={() => router.replace('/welcome')}>
         <ThemedText style={styles.back}>

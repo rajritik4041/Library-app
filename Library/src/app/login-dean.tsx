@@ -82,7 +82,7 @@
 // }
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { LoginForm } from '@/components/auth/login-form';
 import { PageHeader } from '@/components/library/page-header';
@@ -99,7 +99,7 @@ export default function LoginDeanScreen() {
   const [deanId, setDeanId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
@@ -109,39 +109,18 @@ export default function LoginDeanScreen() {
         textAlign: 'center',
         marginTop: Spacing.four,
       },
-
-      errorBox: {
-        backgroundColor: 'rgba(255,0,0,0.08)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,0,0,0.25)',
-        padding: Spacing.three,
-        borderRadius: 12,
-        marginTop: Spacing.three,
-      },
-
-      errorText: {
-        color: '#ff4d4f',
-        fontWeight: '600',
-        textAlign: 'center',
-      },
     }),
   );
 
   const onLogin = async () => {
-    setError('');
-
-    if (!deanId.trim() || !password) {
-      setError('Enter the Dean ID and password.');
-      return;
-    }
-
+    setSubmitError('');
     setLoading(true);
 
     try {
       await loginDean(deanId, password);
       router.replace('/(tabs)/dean' as const);
     } catch (e) {
-      setError(
+      setSubmitError(
         e instanceof Error
           ? e.message
           : 'Login failed. Please try again.',
@@ -162,6 +141,8 @@ export default function LoginDeanScreen() {
       <LoginForm
         fields={[
           {
+            key: 'deanId',
+            kind: 'deanId',
             label: 'Dean ID',
             value: deanId,
             onChangeText: setDeanId,
@@ -169,6 +150,8 @@ export default function LoginDeanScreen() {
             autoCapitalize: 'characters',
           },
           {
+            key: 'password',
+            kind: 'password',
             label: 'Password',
             value: password,
             onChangeText: setPassword,
@@ -178,14 +161,8 @@ export default function LoginDeanScreen() {
         ]}
         onSubmit={onLogin}
         loading={loading}
-        // hint="Default: DEAN01 / dean123"
+        submitError={submitError}
       />
-
-      {!!error && (
-        <View style={styles.errorBox}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        </View>
-      )}
 
       <Pressable onPress={() => router.replace('/welcome')}>
         <ThemedText style={styles.back}>

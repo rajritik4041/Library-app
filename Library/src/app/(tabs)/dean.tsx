@@ -1,22 +1,16 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { FormField } from '@/components/form/form-field';
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { Radius, Spacing } from '@/constants/theme';
+import { useFieldFeedback } from '@/hooks/use-field-feedback';
 import { useFormStyles } from '@/hooks/use-form-styles';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { confirmAsync } from '@/lib/confirm';
-import { webTextInputProps } from '@/lib/platform-styles';
 import { showAlert } from '@/lib/show-alert';
 import { api } from '@/services/api';
 import type { TeacherSession } from '@/types/api';
@@ -33,7 +27,8 @@ const emptyForm = {
 export default function DeanScreen() {
   const { isDean, token, dean, logout } = useAuth();
   const router = useRouter();
-  const { styles: FormStyles, colors: FormColors } = useFormStyles();
+  const { styles: FormStyles, colors } = useFormStyles();
+  const fields = useFieldFeedback();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       teacherRow: {
@@ -90,6 +85,12 @@ export default function DeanScreen() {
         marginBottom: Spacing.two,
       },
       editBannerText: { color: c.accent, fontWeight: '700', fontSize: 13 },
+      banner: {
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: Spacing.one,
+      },
     }),
   );
 
@@ -138,15 +139,25 @@ export default function DeanScreen() {
 
   const saveTeacher = async () => {
     if (!token) return;
-    if (!form.name.trim()) {
-      showAlert('Error', 'Teacher name is required');
-      return;
+
+    const checks: Parameters<typeof fields.validateAll>[0] = [
+      { key: 'name', kind: 'name', value: form.name },
+      { key: 'mobile', kind: 'mobileOptional', value: form.mobile },
+      { key: 'department', kind: 'department', value: form.department, options: { required: false } },
+      { key: 'inCharge', kind: 'text', value: form.inCharge, options: { required: false } },
+    ];
+    if (!editingId) {
+      checks.unshift(
+        { key: 'teacherId', kind: 'teacherId', value: form.teacherId },
+        { key: 'password', kind: 'password', value: form.password },
+      );
+    } else if (form.password.trim()) {
+      checks.push({ key: 'password', kind: 'passwordOptional', value: form.password });
     }
-    if (!editingId && (!form.teacherId.trim() || !form.password)) {
-      showAlert('Error', 'Enter ID and password for a new teacher');
-      return;
-    }
+    if (!fields.validateAll(checks)) return;
+
     setSaving(true);
+    fields.hide('_save');
     try {
       if (editingId) {
         await api.updateDeanTeacher(token, editingId, {
@@ -156,7 +167,7 @@ export default function DeanScreen() {
           inCharge: form.inCharge.trim(),
           ...(form.password ? { password: form.password } : {}),
         });
-        showAlert('Saved', 'Teacher updated');
+        fields.showMessage('_save', true, 'Professor updated');
       } else {
         await api.createDeanTeacher(token, {
           teacherId: form.teacherId.trim(),
@@ -166,12 +177,16 @@ export default function DeanScreen() {
           department: form.department.trim(),
           inCharge: form.inCharge.trim(),
         });
-        showAlert('Created', `Teacher ${form.teacherId.toUpperCase()} created`);
+        fields.showMessage(
+          '_save',
+          true,
+          `Professor ${form.teacherId.toUpperCase()} created`,
+        );
       }
       resetForm();
       await load();
     } catch (e) {
-      showAlert('Failed', e instanceof Error ? e.message : 'Could not save');
+      fields.showMessage('_save', false, e instanceof Error ? e.message : 'Could not save');
     } finally {
       setSaving(false);
     }
@@ -189,17 +204,29 @@ export default function DeanScreen() {
       await api.deleteDeanTeacher(token, t.teacherId);
       if (editingId === t.teacherId) resetForm();
       await load();
-      showAlert('Deleted', 'Teacher account removed');
+      fields.showMessage('_save', true, 'Professor account removed');
     } catch (e) {
-      showAlert('Delete failed', e instanceof Error ? e.message : 'Could not delete');
+      fields.showMessage('_save', false, e instanceof Error ? e.message : 'Could not delete');
     }
   };
 
-  const inputProps = {
-    placeholderTextColor: FormColors.inputPlaceholder,
-    style: FormStyles.input,
-    ...webTextInputProps,
-  };
+  const bind = (
+    key: string,
+    kind: Parameters<typeof fields.validateOnBlur>[1],
+    value: string,
+    onChange: (v: string) => void,
+    required = true,
+  ) => ({
+    kind,
+    value,
+    onChangeText: onChange,
+    feedback: fields.get(key),
+    onBlur: () => fields.validateOnBlur(key, kind, value, { required }),
+    onChangeValidate: (v: string) =>
+      fields.validateOnChange(key, kind, v, { required }),
+  });
+
+  const saveBanner = fields.get('_save');
 
   if (!isDean || !token) {
     return (
@@ -241,65 +268,76 @@ export default function DeanScreen() {
         ) : null}
         {!editingId ? (
           <>
-            <ThemedText style={FormStyles.label}>Professor ID *</ThemedText>
-            <TextInput
+            <FormField
+              label="Professor ID *"
               placeholder="e.g. T002"
-              value={form.teacherId}
-              onChangeText={(v) => setForm((f) => ({ ...f, teacherId: v }))}
               autoCapitalize="characters"
-              {...inputProps}
+              {...bind('teacherId', 'teacherId', form.teacherId, (v) =>
+                setForm((f) => ({ ...f, teacherId: v })),
+              )}
             />
-            <ThemedText style={FormStyles.label}>Password *</ThemedText>
-            <TextInput
+            <FormField
+              label="Password *"
               placeholder="Login password"
-              value={form.password}
-              onChangeText={(v) => setForm((f) => ({ ...f, password: v }))}
               secureTextEntry
-              {...inputProps}
+              {...bind('password', 'password', form.password, (v) =>
+                setForm((f) => ({ ...f, password: v })),
+              )}
             />
           </>
         ) : (
-          <>
-            <ThemedText style={FormStyles.hint}>
-            New password (optional — you can leave this field empty)
-              </ThemedText>
-            <TextInput
-              placeholder="New password"
-              value={form.password}
-              onChangeText={(v) => setForm((f) => ({ ...f, password: v }))}
-              secureTextEntry
-              {...inputProps}
-            />
-          </>
+          <FormField
+            label="New password (optional)"
+            placeholder="Leave empty to keep current"
+            secureTextEntry
+            {...bind(
+              'password',
+              'passwordOptional',
+              form.password,
+              (v) => setForm((f) => ({ ...f, password: v })),
+              false,
+            )}
+          />
         )}
-        <ThemedText style={FormStyles.label}>Name *</ThemedText>
-        <TextInput
-          placeholder="Teacher name"
-          value={form.name}
-          onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
-          {...inputProps}
+        <FormField
+          label="Name *"
+          placeholder="Professor name"
+          {...bind('name', 'name', form.name, (v) => setForm((f) => ({ ...f, name: v })))}
         />
-        <ThemedText style={FormStyles.label}>Mobile</ThemedText>
-        <TextInput
+        <FormField
+          label="Mobile"
           placeholder="Mobile number"
-          value={form.mobile}
-          onChangeText={(v) => setForm((f) => ({ ...f, mobile: v }))}
           keyboardType="phone-pad"
-          {...inputProps}
+          {...bind(
+            'mobile',
+            'mobileOptional',
+            form.mobile,
+            (v) => setForm((f) => ({ ...f, mobile: v })),
+            false,
+          )}
         />
-        <ThemedText style={FormStyles.label}>Department (Professor)</ThemedText>
-        <TextInput
+        <FormField
+          label="Department (Professor)"
           placeholder="e.g. CSE, ME, CE"
-          value={form.department}
-          onChangeText={(v) => setForm((f) => ({ ...f, department: v }))}
-          {...inputProps}
+          autoCapitalize="characters"
+          {...bind(
+            'department',
+            'department',
+            form.department,
+            (v) => setForm((f) => ({ ...f, department: v })),
+            false,
+          )}
         />
-        <ThemedText style={FormStyles.label}>Incharge of</ThemedText>
-        <TextInput
+        <FormField
+          label="Incharge of"
           placeholder="e.g. Library, Lab, Sports"
-          value={form.inCharge}
-          onChangeText={(v) => setForm((f) => ({ ...f, inCharge: v }))}
-          {...inputProps}
+          {...bind(
+            'inCharge',
+            'text',
+            form.inCharge,
+            (v) => setForm((f) => ({ ...f, inCharge: v })),
+            false,
+          )}
         />
         <Pressable style={styles.btn} onPress={saveTeacher} disabled={saving}>
           <ThemedText style={styles.btnText}>
@@ -310,6 +348,16 @@ export default function DeanScreen() {
           <Pressable style={styles.btnSecondary} onPress={resetForm}>
             <ThemedText style={styles.btnTextDark}>Cancel edit</ThemedText>
           </Pressable>
+        ) : null}
+
+        {saveBanner?.message ? (
+          <ThemedText
+            style={[
+              styles.banner,
+              { color: saveBanner.valid ? colors.success : colors.danger },
+            ]}>
+            {saveBanner.message}
+          </ThemedText>
         ) : null}
       </View>
 

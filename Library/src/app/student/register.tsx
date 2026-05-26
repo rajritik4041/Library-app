@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { FormField } from '@/components/form/form-field';
 import { PageHeader } from '@/components/library/page-header';
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/context/auth-context';
 import { Radius, Spacing } from '@/constants/theme';
+import { useFieldFeedback } from '@/hooks/use-field-feedback';
 import { useFormStyles } from '@/hooks/use-form-styles';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { api } from '@/services/api';
@@ -13,7 +15,8 @@ import { api } from '@/services/api';
 export default function RegisterStudentScreen() {
   const { token, isStaff } = useAuth();
   const router = useRouter();
-  const { styles: FormStyles, colors: FormColors } = useFormStyles();
+  const { styles: FormStyles, colors } = useFormStyles();
+  const fields = useFieldFeedback();
   const styles = useThemedStyles((c) =>
     StyleSheet.create({
       btn: {
@@ -26,6 +29,12 @@ export default function RegisterStudentScreen() {
       },
       btnText: { color: '#fff', fontWeight: '800' },
       back: { color: c.accent, fontWeight: '600', textAlign: 'center', width: '100%' },
+      banner: {
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: Spacing.two,
+      },
     }),
   );
 
@@ -50,21 +59,36 @@ export default function RegisterStudentScreen() {
     );
   }
 
+  const bind = (
+    key: string,
+    kind: Parameters<typeof fields.validateOnBlur>[1],
+    value: string,
+    set: (v: string) => void,
+  ) => ({
+    kind,
+    value,
+    onChangeText: set,
+    feedback: fields.get(key),
+    onBlur: () => fields.validateOnBlur(key, kind, value, { required: true }),
+    onChangeValidate: (v: string) =>
+      fields.validateOnChange(key, kind, v, { required: true }),
+  });
+
   const onSubmit = async () => {
-    if (
-      !idNo.trim() ||
-      !userId.trim() ||
-      !password ||
-      !name.trim() ||
-      !mobile.trim() ||
-      !course.trim() ||
-      !year.trim() ||
-      !department.trim()
-    ) {
-      Alert.alert('Error', 'Fill all fields (ID No, User ID, password, name, mobile, course, grade)');
-      return;
-    }
+    const ok = fields.validateAll([
+      { key: 'idNo', kind: 'studentId', value: idNo },
+      { key: 'userId', kind: 'username', value: userId },
+      { key: 'password', kind: 'password', value: password },
+      { key: 'name', kind: 'name', value: name },
+      { key: 'mobile', kind: 'mobile', value: mobile },
+      { key: 'course', kind: 'course', value: course },
+      { key: 'year', kind: 'year', value: year },
+      { key: 'department', kind: 'department', value: department },
+    ]);
+    if (!ok) return;
+
     setLoading(true);
+    fields.hide('_form');
     try {
       await api.createStudent(token, {
         studentId: idNo.trim(),
@@ -77,37 +101,20 @@ export default function RegisterStudentScreen() {
         year: year.trim(),
         department: department.trim(),
       });
-      Alert.alert('Success', `Student registered.\nUser ID: ${userId.toUpperCase()}`, [
-        { text: 'OK', onPress: () => router.replace('/(tabs)/teacher') },
-      ]);
+      fields.showMessage(
+        '_form',
+        true,
+        `Student registered — User ID: ${userId.toUpperCase()}`,
+      );
+      setTimeout(() => router.replace('/(tabs)/teacher'), 2000);
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Failed');
+      fields.showMessage('_form', false, e instanceof Error ? e.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const field = (
-    label: string,
-    value: string,
-    set: (v: string) => void,
-    placeholder: string,
-    opts?: { secure?: boolean; caps?: boolean; phone?: boolean },
-  ) => (
-    <View key={label}>
-      <ThemedText style={FormStyles.label}>{label}</ThemedText>
-      <TextInput
-        value={value}
-        onChangeText={set}
-        placeholder={placeholder}
-        secureTextEntry={opts?.secure}
-        autoCapitalize={opts?.caps ? 'characters' : 'none'}
-        keyboardType={opts?.phone ? 'phone-pad' : 'default'}
-        placeholderTextColor={FormColors.inputPlaceholder}
-        style={FormStyles.input}
-      />
-    </View>
-  );
+  const formBanner = fields.get('_form');
 
   return (
     <ScrollView contentContainerStyle={FormStyles.page}>
@@ -118,20 +125,55 @@ export default function RegisterStudentScreen() {
       />
 
       <View style={FormStyles.card}>
-        {field('Student ID No *', idNo, setIdNo, 'e.g. 2024AG001', { caps: true })}
-        {field('Student User ID * (for login)', userId, setUserId, 'e.g. STU001', { caps: true })}
-        {field('Password *', password, setPassword, 'Login password', { secure: true })}
-        {field('Full name *', name, setName, 'Student name')}
-        {field('Mobile No *', mobile, setMobile, '10-digit mobile', { phone: true })}
-        {field('Course *', course, setCourse, 'e.g. B.Tech')}
-        {field('Grade / Year *', year, setYear, 'e.g. 1, 2, 3')}
-        {field('Department *', department, setDepartment, 'e.g. CSE')}
+        <FormField
+          label="Student ID No *"
+          placeholder="e.g. 2024AG001"
+          autoCapitalize="characters"
+          {...bind('idNo', 'studentId', idNo, setIdNo)}
+        />
+        <FormField
+          label="Student User ID * (for login)"
+          placeholder="e.g. STU001"
+          autoCapitalize="characters"
+          {...bind('userId', 'username', userId, setUserId)}
+        />
+        <FormField
+          label="Password *"
+          placeholder="Login password"
+          secureTextEntry
+          {...bind('password', 'password', password, setPassword)}
+        />
+        <FormField label="Full name *" placeholder="Student name" {...bind('name', 'name', name, setName)} />
+        <FormField
+          label="Mobile No *"
+          placeholder="10-digit mobile"
+          keyboardType="phone-pad"
+          {...bind('mobile', 'mobile', mobile, setMobile)}
+        />
+        <FormField label="Course *" placeholder="e.g. B.Tech" {...bind('course', 'course', course, setCourse)} />
+        <FormField label="Grade / Year *" placeholder="e.g. 1, 2, 3" {...bind('year', 'year', year, setYear)} />
+        <FormField
+          label="Department *"
+          placeholder="e.g. CSE"
+          autoCapitalize="characters"
+          {...bind('department', 'department', department, setDepartment)}
+        />
 
         <Pressable style={styles.btn} onPress={onSubmit} disabled={loading}>
           <ThemedText style={styles.btnText}>
             {loading ? 'Saving…' : 'Create Student Account'}
           </ThemedText>
         </Pressable>
+
+        {formBanner?.message ? (
+          <ThemedText
+            style={[
+              styles.banner,
+              { color: formBanner.valid ? colors.success : colors.danger },
+            ]}>
+            {formBanner.message}
+          </ThemedText>
+        ) : null}
       </View>
 
       <Pressable onPress={() => router.replace('/(tabs)/teacher')}>
