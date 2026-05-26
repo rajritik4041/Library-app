@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
-import { cardBorder, libraryElevation, webTypography } from '@/lib/platform-styles';
+import { cardBorder, libraryElevation, webTextInputProps, webTypography } from '@/lib/platform-styles';
 
 type SearchBarProps = {
   value: string;
@@ -81,6 +81,7 @@ export function SearchBar({
           autoCapitalize="none"
           autoCorrect={false}
           clearButtonMode="while-editing"
+          {...webTextInputProps}
         />
         {value.length > 0 && onClear ? (
           <Pressable onPress={onClear} hitSlop={8} style={styles.clearBtn}>

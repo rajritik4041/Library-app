@@ -22,6 +22,7 @@ import { api } from '@/services/api';
 import { resolveBookCatalogId } from '@/lib/book-id';
 import { MAX_STUDENT_ACTIVE_ISSUES, validateStudentCanIssue } from '@/lib/issue-limits';
 import { confirmAsync } from '@/lib/confirm';
+import { webTextInputProps } from '@/lib/platform-styles';
 import { showAlert } from '@/lib/show-alert';
 import type { ApiStudent } from '@/types/api';
 
@@ -181,11 +182,11 @@ export default function TeacherScreen() {
           (s as { serviceAccountEmail?: string }).serviceAccountEmail ||
           'sheets@sheet-manage-496912.iam.gserviceaccount.com';
         setSyncBanner(
-          `Excel sync BLOCKED: App se add/edit Excel tak nahi jayega. Google Sheet → Share → ${email} ko Editor banaein (Viewer se kaam nahi hota). Excel se MongoDB abhi chal sakta hai.`,
+          `Excel sync BLOCKED: Add/edit from the app will not reach Excel. Google Sheet → Share → grant Editor access to ${email} (Viewer is not enough). Excel → MongoDB sync may still work.`,
         );
       } else if (!s.inSync) {
         setSyncBanner(
-          `Excel/Mongo alag hai (Sheet ${s.sheetCount}, DB ${s.mongoCount}). Auto-sync chal rahi hai…`,
+          `Excel and MongoDB are out of sync (Sheet ${s.sheetCount}, DB ${s.mongoCount}). Auto-sync is running…`,
         );
       } else {
         setSyncBanner(null);
@@ -287,7 +288,7 @@ export default function TeacherScreen() {
       showAlert(
         res.sheetWarning ? 'Added (Excel sync pending)' : 'Success',
         res.sheetWarning
-          ? `MongoDB mein save ho gaya.\n\n${res.sheetWarning}`
+          ? `Saved to MongoDB.\n\n${res.sheetWarning}`
           : 'Book added — MongoDB & Excel synced',
       );
     } catch (e) {
@@ -344,14 +345,14 @@ export default function TeacherScreen() {
     const idNo = issueStudentIdNo.trim();
 
     if (!catalogId || !idNo) {
-      const msg = 'Book Catalog ID (or book #) aur Student ID No dono zaroori hain';
+      const msg = 'Book Catalog ID (or book #) and Student ID No are both required';
       setIssueError(msg);
       showAlert('Error', msg);
       return;
     }
 
     if (students.length === 0) {
-      const msg = 'Pehle kam se kam ek student register karein — bina registration book issue nahi hogi';
+      const msg = 'Register at least one student first — books cannot be issued without registration';
       setIssueError(msg);
       showAlert('Error', msg);
       return;
@@ -402,7 +403,7 @@ export default function TeacherScreen() {
       const { book } = await api.getBook(catalogId);
       const ok = await confirmAsync(
         'Delete book?',
-        `"${book.title}" (ID ${book.id})\n\nPehle saari copies return karein. Sirf teacher-added books delete ho sakti hain.`,
+        `"${book.title}" (ID ${book.id})\n\nReturn all copies first. Only books added by teachers can be deleted.`,
         { confirmLabel: 'Continue', destructive: true },
       );
       if (!ok) return;
@@ -421,7 +422,7 @@ export default function TeacherScreen() {
       await refresh();
       showAlert(
         del.sheetWarning ? 'Deleted (Excel pending)' : 'Deleted',
-        del.sheetWarning || 'Book remove ho gayi',
+        del.sheetWarning || 'Book removed',
       );
     } catch (e) {
       showAlert('Delete failed', e instanceof Error ? e.message : 'Could not delete book');
@@ -431,11 +432,14 @@ export default function TeacherScreen() {
   const inputProps = {
     placeholderTextColor: FormColors.inputPlaceholder,
     style: FormStyles.input,
+    ...webTextInputProps,
   };
 
   return (
     <ScrollView
       contentContainerStyle={FormStyles.page}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       refreshControl={<RefreshControl refreshing={loadingStudents} onRefresh={() => loadStudents()} />}>
       <PageHeader
         badge="Professor"
@@ -586,7 +590,8 @@ export default function TeacherScreen() {
       <View style={FormStyles.card}>
         <ThemedText style={FormStyles.cardTitle}>🗑️ Manage / Delete Book</ThemedText>
         <ThemedText style={FormStyles.hint}>
-      Your password is required to delete the account. Please return all issued book copies first.
+          Your password is required to delete a book. Return all copies first. Only books added by
+          teachers can be deleted (Excel-imported rows cannot be removed here).
         </ThemedText>
         <ThemedText style={FormStyles.label}>Book Catalog ID to delete *</ThemedText>
         <TextInput

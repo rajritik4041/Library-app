@@ -29,7 +29,7 @@ let sheetWriteError = '';
 /** App CRUD ke baad kitni der tak sheet→mongo band (revert rokne ke liye) */
 const RECENT_MONGO_MS = Number(process.env.SHEET_RECENT_MONGO_MS || 120000);
 const SHEET_WRITE_HINT =
-  'Google Sheet → Share → service account email ko Editor banaein (Viewer se kaam nahi chalega).';
+  'Google Sheet → Share → grant Editor access to the service account email (Viewer is not enough).';
 
 /** Call after teacher add/edit/delete in MongoDB so reconcile prefers mongo→sheet */
 export function noteMongoChanged() {
@@ -173,7 +173,7 @@ async function writeSheetRows(books) {
     if (/permission|403|denied/i.test(msg)) {
       sheetWriteOk = false;
       sheetWriteError =
-        `Google Sheet par likhne ki permission nahi. Sheet ko "${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL}" ko Editor access dein.`;
+        `No write permission on Google Sheet. Grant Editor access to "${process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL}".`;
       console.error('❌', sheetWriteError);
     }
     throw e;

@@ -513,7 +513,7 @@ export function filePostIssue({ bookId, studentId, studentName, teacherId, teach
   const st = fileFindStudent(sid);
   if (!st) {
     throw new Error(
-      'Student not registered. Pehle teacher panel se student register karein (ID No se).',
+      'Student not registered. Register the student from the teacher panel first (using ID No).',
     );
   }
   const issues = readIssues();

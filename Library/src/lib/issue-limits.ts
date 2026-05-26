@@ -24,12 +24,12 @@ export function validateStudentCanIssue(
 ): string | null {
   const active = getStudentActiveIssues(allActiveIssues, studentId);
   if (active.length >= MAX_STUDENT_ACTIVE_ISSUES) {
-    return `Student ke paas pehle se ${MAX_STUDENT_ACTIVE_ISSUES} books issued hain. Pehle kuch books return karwayein.`;
+    return `This student already has ${MAX_STUDENT_ACTIVE_ISSUES} books issued. Return some books before issuing more.`;
   }
   const cid = String(bookCatalogId).trim();
   const hasBook = active.some((i) => String(i.book?.id ?? '').trim() === cid);
   if (hasBook) {
-    return 'Ye book is student ke paas pehle se issued hai. Ek hi book dobara issue nahi ho sakti.';
+    return 'This book is already issued to this student. The same book cannot be issued twice.';
   }
   return null;
 }

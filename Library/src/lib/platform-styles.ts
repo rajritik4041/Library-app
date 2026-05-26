@@ -1,6 +1,15 @@
-import { Platform, type TextStyle, type ViewStyle } from 'react-native';
+import { Platform, type TextInputProps, type TextStyle, type ViewStyle } from 'react-native';
 
 export const isWeb = Platform.OS === 'web';
+
+/** Extra props so TextInput receives focus/clicks reliably on web and Electron (Windows). */
+export const webTextInputProps: Partial<TextInputProps> = Platform.select({
+  web: {
+    autoComplete: 'off',
+    tabIndex: 0,
+  } as Partial<TextInputProps>,
+  default: {},
+}) ?? {};
 
 /** Segoe UI / system stack on web & Electron — matches global.css --font-display. */
 export const webTypography = Platform.select({

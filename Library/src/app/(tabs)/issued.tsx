@@ -231,7 +231,7 @@ export default function IssuedScreen() {
         </ThemedText>
       ) : filteredIssues.length === 0 ? (
         <ThemedText themeColor="textSecondary">
-          Koi record nahi mila — ID No, naam ya book title check karein
+          No records match — check ID No, name, or book title
         </ThemedText>
       ) : (
         filteredIssues.map((issue) => (

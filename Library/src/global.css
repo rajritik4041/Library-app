@@ -43,6 +43,21 @@ html[data-library-theme='dark'] textarea::placeholder {
   opacity: 1;
 }
 
+/* Keep inputs clickable on Windows Electron (RN Web wraps native <input>). */
+input,
+textarea,
+select,
+[contenteditable='true'] {
+  pointer-events: auto;
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+input[type='password'] {
+  cursor: text;
+}
+
 :root {
   --font-display:
     'Segoe UI', Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,

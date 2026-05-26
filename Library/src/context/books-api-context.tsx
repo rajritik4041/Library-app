@@ -100,7 +100,7 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
         mode === 'file'
           ? health.warning ||
               health.hint ||
-              'FILE mode — npm run setup (server/.env MONGODB_URI), phir npm run server'
+              'FILE mode — run npm run setup (server/.env MONGODB_URI), then npm run server'
           : null,
       );
       setActiveIssues(statsRes?.activeIssues ?? 0);
@@ -115,7 +115,7 @@ export function BooksApiProvider({ children }: { children: React.ReactNode }) {
         msg.includes('Aborted');
       setError(
         isNetwork
-          ? `API server band hai (${API_URL}). Terminal: cd Library && npm run dev  (ya alag: npm run server)`
+          ? `API server is offline (${API_URL}). Terminal: cd Library && npm run dev  (or run npm run server separately)`
           : msg,
       );
       const cached = getLocalApiBooks().map(enrichApiBook);

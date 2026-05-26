@@ -134,7 +134,7 @@ export default function HistoryScreen() {
       const data = await api.getIssueHistory(token);
       setIssues(data.issues);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'History load nahi hui';
+      const msg = e instanceof Error ? e.message : 'Could not load history';
       setPageError(msg);
       showAlert('Error', msg);
     } finally {
@@ -153,7 +153,7 @@ export default function HistoryScreen() {
       await api.returnBook(token, returnIssue.id, password);
       setReturnIssue(null);
       await load();
-      showAlert('Success', 'Book returned — ab library mein available dikhegi');
+      showAlert('Success', 'Book returned — it is available in the library again');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Return failed';
       showAlert('Error', msg);

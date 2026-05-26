@@ -61,7 +61,12 @@ function createFormStyles(c: LibraryColorScheme) {
       backgroundColor: c.inputBg,
       outlineStyle: 'none',
       ...webTypography,
-      ...Platform.select({ web: { outlineWidth: 0 } }),
+      ...Platform.select({
+        web: {
+          outlineWidth: 0,
+          cursor: 'text',
+        },
+      }),
     } as object,
     inputDisabled: {
       backgroundColor: c.inputDisabledBg,

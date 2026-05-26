@@ -16,6 +16,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useFormStyles } from '@/hooks/use-form-styles';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { confirmAsync } from '@/lib/confirm';
+import { webTextInputProps } from '@/lib/platform-styles';
 import { showAlert } from '@/lib/show-alert';
 import { api } from '@/services/api';
 import type { TeacherSession } from '@/types/api';
@@ -107,7 +108,7 @@ export default function DeanScreen() {
       const data = await api.getDeanTeachers(token);
       setTeachers(data.teachers);
     } catch (e) {
-      showAlert('Error', e instanceof Error ? e.message : 'Teachers load nahi hue');
+      showAlert('Error', e instanceof Error ? e.message : 'Could not load teachers');
     } finally {
       setLoading(false);
     }
@@ -138,11 +139,11 @@ export default function DeanScreen() {
   const saveTeacher = async () => {
     if (!token) return;
     if (!form.name.trim()) {
-      showAlert('Error', 'Teacher ka naam zaroori hai');
+      showAlert('Error', 'Teacher name is required');
       return;
     }
     if (!editingId && (!form.teacherId.trim() || !form.password)) {
-      showAlert('Error', 'Nayi teacher ke liye ID aur password daalein');
+      showAlert('Error', 'Enter ID and password for a new teacher');
       return;
     }
     setSaving(true);
@@ -155,7 +156,7 @@ export default function DeanScreen() {
           inCharge: form.inCharge.trim(),
           ...(form.password ? { password: form.password } : {}),
         });
-        showAlert('Saved', 'Teacher update ho gayi');
+        showAlert('Saved', 'Teacher updated');
       } else {
         await api.createDeanTeacher(token, {
           teacherId: form.teacherId.trim(),
@@ -165,12 +166,12 @@ export default function DeanScreen() {
           department: form.department.trim(),
           inCharge: form.inCharge.trim(),
         });
-        showAlert('Created', `Teacher ${form.teacherId.toUpperCase()} ban gayi`);
+        showAlert('Created', `Teacher ${form.teacherId.toUpperCase()} created`);
       }
       resetForm();
       await load();
     } catch (e) {
-      showAlert('Failed', e instanceof Error ? e.message : 'Save nahi hua');
+      showAlert('Failed', e instanceof Error ? e.message : 'Could not save');
     } finally {
       setSaving(false);
     }
@@ -180,7 +181,7 @@ export default function DeanScreen() {
     if (!token) return;
     const ok = await confirmAsync(
       'Delete teacher?',
-      `${t.name} (${t.teacherId}) — account hamesha ke liye hat jayega.`,
+      `${t.name} (${t.teacherId}) — this account will be removed permanently.`,
       { confirmLabel: 'Delete', destructive: true },
     );
     if (!ok) return;
@@ -188,7 +189,7 @@ export default function DeanScreen() {
       await api.deleteDeanTeacher(token, t.teacherId);
       if (editingId === t.teacherId) resetForm();
       await load();
-      showAlert('Deleted', 'Teacher account remove ho gaya');
+      showAlert('Deleted', 'Teacher account removed');
     } catch (e) {
       showAlert('Delete failed', e instanceof Error ? e.message : 'Could not delete');
     }
@@ -197,6 +198,7 @@ export default function DeanScreen() {
   const inputProps = {
     placeholderTextColor: FormColors.inputPlaceholder,
     style: FormStyles.input,
+    ...webTextInputProps,
   };
 
   if (!isDean || !token) {
@@ -213,6 +215,8 @@ export default function DeanScreen() {
   return (
     <ScrollView
       contentContainerStyle={FormStyles.page}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
       <PageHeader
         badge="Dean"

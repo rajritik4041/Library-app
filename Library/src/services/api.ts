@@ -25,7 +25,7 @@ async function request<T>(
   try {
     response = await fetch(`${API_URL}${path}`, { ...init, headers });
   } catch {
-    throw new Error('Network error — kya server chal raha hai? (npm run server)');
+    throw new Error('Network error — is the API server running? (npm run server)');
   }
   const text = await response.text();
   let data: Record<string, unknown> = {};
@@ -34,7 +34,7 @@ async function request<T>(
   } catch {
     if (/Cannot PUT \/api\/books/i.test(text)) {
       throw new Error(
-        'Server par book edit abhi enable nahi — GitHub se latest backend deploy karein (Render redeploy).',
+        'Book edit is not enabled on this server — deploy the latest backend (Render redeploy).',
       );
     }
   }

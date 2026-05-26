@@ -3,9 +3,9 @@ export const MAX_STUDENT_ACTIVE_ISSUES = 5;
 
 export const ISSUE_LIMIT_MSG = {
   maxBooks: (n = MAX_STUDENT_ACTIVE_ISSUES) =>
-    `Student ke paas pehle se ${n} books issued hain. Pehle kuch books return karwayein.`,
+    `This student already has ${n} books issued. Return some books before issuing more.`,
   duplicateBook:
-    'Ye book is student ke paas pehle se issued hai. Ek hi book dobara issue nahi ho sakti.',
+    'This book is already issued to this student. The same book cannot be issued twice.',
 };
 
 export function issueLimitError(message) {

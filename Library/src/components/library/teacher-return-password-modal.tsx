@@ -11,7 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useLibraryColors } from '@/hooks/use-library-colors';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
-import { cardBorder, libraryElevation, webTypography } from '@/lib/platform-styles';
+import { cardBorder, libraryElevation, webTextInputProps, webTypography } from '@/lib/platform-styles';
 
 type TeacherReturnPasswordModalProps = {
   visible: boolean;
@@ -101,7 +101,7 @@ export function TeacherReturnPasswordModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={styles.overlay} onPress={onCancel}>
-        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+        <View style={styles.card}>
           <ThemedText style={styles.title}>{title}</ThemedText>
           <ThemedText style={styles.sub}>{subtitle}</ThemedText>
           {bookTitle ? (
@@ -120,6 +120,7 @@ export function TeacherReturnPasswordModal({
             placeholderTextColor={colors.inputPlaceholder}
             style={styles.input}
             onSubmitEditing={() => void submit()}
+            {...webTextInputProps}
           />
           <View style={styles.row}>
             <Pressable
@@ -137,7 +138,7 @@ export function TeacherReturnPasswordModal({
               </ThemedText>
             </Pressable>
           </View>
-        </Pressable>
+        </View>
       </Pressable>
     </Modal>
   );

@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useFormStyles } from '@/hooks/use-form-styles';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { webTextInputProps } from '@/lib/platform-styles';
 
 type Field = {
   label: string;
@@ -67,6 +68,7 @@ export function LoginForm({
             keyboardType={field.keyboardType}
             placeholderTextColor={colors.inputPlaceholder}
             style={formStyles.input}
+            {...webTextInputProps}
           />
         </View>
       ))}

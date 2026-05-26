@@ -270,7 +270,7 @@ function formatSheetWarning(sheetPush) {
     'service account email';
   return (
     sheetPush.hint ||
-    `MongoDB mein save ho gaya, par Excel update fail. Google Sheet kholo → Share → ${email} ko Editor banaein.`
+    `Saved to MongoDB, but Excel update failed. Open Google Sheet → Share → grant Editor access to ${email}.`
   );
 }
 
@@ -1147,11 +1147,11 @@ app.delete('/api/books/:catalogId', authTeacher, async (req, res) => {
   try {
     const { password } = req.body;
     if (!password) {
-      return res.status(400).json({ error: 'Apna password daalein — book delete ke liye zaroori hai' });
+      return res.status(400).json({ error: 'Enter your password — required to delete a book' });
     }
     const passwordOk = await verifyStaffPassword(req.teacher, password);
     if (!passwordOk) {
-      return res.status(401).json({ error: 'Galat password — book delete nahi hui' });
+      return res.status(401).json({ error: 'Incorrect password — book was not deleted' });
     }
     const catalogKey = decodeURIComponent(String(req.params.catalogId || ''));
     if (USE_FILE_MODE) {
@@ -1302,7 +1302,7 @@ app.post('/api/issues', authTeacher, async (req, res) => {
     const registered = await requireRegisteredStudentByIdNo(studentId);
     if (!registered) {
       return res.status(400).json({
-        error: 'Student not registered. Pehle teacher panel se student register karein (ID No se).',
+        error: 'Student not registered. Register the student from the teacher panel first (using ID No).',
       });
     }
     const sid = registered.studentId;
@@ -1371,7 +1371,7 @@ app.post('/api/issues/:issueId/return', authTeacher, async (req, res) => {
     }
     const passwordOk = await verifyStaffPassword(req.teacher, password);
     if (!passwordOk) {
-      return res.status(401).json({ error: 'Galat password — return confirm nahi hua' });
+      return res.status(401).json({ error: 'Incorrect password — return was not confirmed' });
     }
     if (USE_FILE_MODE) {
       const { book } = fileStore.fileReturnIssue(req.params.issueId);
@@ -1442,7 +1442,7 @@ app.get('/api/health', async (_req, res) => {
 
   if (mode === 'file') {
     payload.warning =
-      'FILE mode — app MongoDB use nahi karega. Teacher save server/data mein, deploy se alag ho sakta hai.';
+      'FILE mode — the app will not use MongoDB. Teacher data is stored in server/data and may differ from deploy.';
     payload.ok = true;
     const stats = fileStore.fileStats();
     payload.counts = {
@@ -1524,7 +1524,7 @@ app.post('/api/sync-catalog', authTeacher, async (_req, res) => {
     if (USE_FILE_MODE) {
       return res.json({
         ok: true,
-        message: 'FILE mode: Excel se list har request par ../src/data/catalog.json se aati hai. Pehle npm run import-books chalayein.',
+        message: 'FILE mode: book list is read from catalog.json on each request. Run npm run import-books first.',
       });
     }
     const catalogPath = path.join(__dirname, '..', 'src', 'data', 'catalog.json');
@@ -1574,9 +1574,9 @@ async function start() {
     FILE_MODE_REASON = 'MONGODB_URI missing — copy server/.env.example → server/.env';
     await fileStore.initFileStaff(process.env);
     console.warn(
-      '⚠ MONGODB_URI khali — FILE mode. App sirf offline catalog dikhayegi.',
+      '⚠ MONGODB_URI is empty — FILE mode. The app will show offline catalog only.',
     );
-    console.warn('   Fix: server/.env mein Render wala MONGODB_URI paste karein → npm run server');
+    console.warn('   Fix: paste Render MONGODB_URI into server/.env → npm run server');
     console.log('FILE mode: Excel → ../src/data/catalog.json | issues → server/data/issues.json');
   } else {
     try {
@@ -1594,7 +1594,7 @@ async function start() {
           const writeCheck = await sheetSync.verifySheetWriteAccess();
           if (!writeCheck.ok) {
             console.warn(
-              '⚠ Sheet WRITE blocked — app→Excel sync nahi chalega jab tak sheet share na ho:',
+              '⚠ Sheet WRITE blocked — app→Excel sync will not run until the sheet is shared:',
               process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
               '(Editor)',
               writeCheck.error,
@@ -1617,10 +1617,10 @@ async function start() {
         }
       }
     } catch (e) {
-      console.error('MongoDB connection failed — server start nahi hoga (FILE fallback band):');
+      console.error('MongoDB connection failed — server will not start (FILE fallback disabled):');
       console.error('  ', e.message);
       console.error('  server/.env → MONGODB_URI = Render deploy wala same URI');
-      console.error('  Atlas Network Access → 0.0.0.0/0 ya apna IP allow karein');
+      console.error('  Atlas Network Access → allow 0.0.0.0/0 or your IP');
       process.exit(1);
     }
   }

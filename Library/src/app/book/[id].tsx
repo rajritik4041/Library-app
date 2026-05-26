@@ -280,7 +280,7 @@ export default function BookDetailScreen() {
       setIssueError(null);
       await load();
       await refresh();
-      showAlert('Issued', `Book ${student.name} (${student.studentId}) ko di gayi`);
+      showAlert('Issued', `Book issued to ${student.name} (${student.studentId})`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Could not issue book';
       setIssueError(msg);

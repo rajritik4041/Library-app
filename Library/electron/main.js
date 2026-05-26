@@ -83,10 +83,13 @@ function createWindow(loadUrl) {
     minHeight: 600,
     title: 'MCAET Library',
     autoHideMenuBar: true,
+    backgroundColor: '#eef3f9',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true,
+      // sandbox:true can block reliable keyboard/focus on some Windows builds
+      sandbox: false,
+      backgroundThrottling: false,
     },
   });
 
@@ -95,6 +98,15 @@ function createWindow(loadUrl) {
       shell.openExternal(url);
     }
     return { action: 'deny' };
+  });
+
+  win.webContents.on('did-finish-load', () => {
+    win.focus();
+    win.webContents.focus();
+  });
+
+  win.webContents.on('did-fail-load', (_event, code, desc) => {
+    console.error('Page failed to load:', code, desc);
   });
 
   win.loadURL(loadUrl);

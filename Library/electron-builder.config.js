@@ -16,6 +16,7 @@ module.exports = {
   },
   win: {
     target: [{ target: 'nsis', arch: ['x64'] }],
+      "signAndEditExecutable": true,
     icon: 'icon.png',
   },
   nsis: {
