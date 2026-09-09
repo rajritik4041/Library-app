@@ -143,6 +143,40 @@ export const api = {
       body: JSON.stringify({ userId, password }),
     }),
 
+  signupStudent: (body: {
+    name: string;
+    username: string;
+    id: string;
+    email: string;
+    password: string;
+    mobile?: string;
+    course?: string;
+    branch?: string;
+    year?: string;
+    department?: string;
+    dob?: string;
+    gender?: string;
+  }) =>
+    request<{ success: boolean; message: string; token: string; student: StudentSession }>(
+      '/api/auth/student/signup',
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+
+  sendOtp: (email: string) =>
+    request<{ success: boolean; message: string }>('/api/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  verifyOtp: (email: string, otp: string) =>
+    request<{ success: boolean; message: string }>('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    }),
+
   getStudents: (token: string, search?: string) => {
     const q = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
     return request<{ students: ApiStudent[] }>(`/api/students${q}`, { token });

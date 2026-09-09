@@ -103,3 +103,35 @@ export async function withMongoRetry(fn, { retries = 2, uri } = {}) {
 }
 
 export { isTransientMongoError };
+
+let authConnection = null;
+
+export async function connectAuthMongo(uri) {
+  if (!uri?.trim()) {
+    console.warn('MCAET_AUTH_MONGODB_URI not configured — auth will use local Mongo / file store');
+    return null;
+  }
+  if (authConnection && authConnection.readyState === 1) {
+    return authConnection;
+  }
+  try {
+    authConnection = await mongoose.createConnection(uri, MONGO_OPTS).asPromise();
+    console.log('MCAET Auth MongoDB connected (student_portal, professor_portal, admin_portal, Otp_Record)');
+    return authConnection;
+  } catch (err) {
+    console.error('Failed to connect to MCAET Auth MongoDB:', err.message);
+    return null;
+  }
+}
+
+export function getAuthConnection() {
+  return authConnection;
+}
+
+export async function ensureAuthMongoConnected(uri) {
+  if (authConnection && authConnection.readyState === 1) return authConnection;
+  if (uri?.trim()) {
+    return connectAuthMongo(uri);
+  }
+  return null;
+}

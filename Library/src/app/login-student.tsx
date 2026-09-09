@@ -132,9 +132,9 @@ export default function StudentLoginScreen() {
   return (
     <ScreenShell centered>
       <PageHeader
-        badge="Student"
+        badge="MCAET Student"
         title="Student Login"
-        subtitle="Login with your Student User ID and password provided by your professor."
+        subtitle="Sign in with your MCAET Portal credentials (Email, Username, or Student Roll No)."
       />
 
       <LoginForm
@@ -142,11 +142,11 @@ export default function StudentLoginScreen() {
           {
             key: 'userId',
             kind: 'username',
-            label: 'Student User ID',
+            label: 'Student Roll No / Email / Username',
             value: userId,
             onChangeText: setUserId,
-            placeholder: 'e.g. STU001',
-            autoCapitalize: 'characters',
+            placeholder: 'e.g. mukesh_93 or student@gmail.com',
+            autoCapitalize: 'none',
           },
           {
             key: 'password',
@@ -154,15 +154,21 @@ export default function StudentLoginScreen() {
             label: 'Password',
             value: password,
             onChangeText: setPassword,
-            placeholder: 'Password',
+            placeholder: 'Portal Password',
             secure: true,
           },
         ]}
         onSubmit={onLogin}
         loading={loading}
         submitError={submitError}
-        hint="Contact your professor if you do not have login credentials yet."
+        hint="Use your existing MCAET Portal account or create a new student account below."
       />
+
+      <Pressable onPress={() => router.push('/signup-student')}>
+        <ThemedText style={[styles.back, { color: '#2563eb', fontWeight: '700', marginTop: Spacing.three }]}>
+          Don't have an account? Sign Up here →
+        </ThemedText>
+      </Pressable>
 
       <Pressable onPress={() => router.replace('/welcome')}>
         <ThemedText style={styles.back}>

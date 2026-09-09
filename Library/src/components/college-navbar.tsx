@@ -45,7 +45,7 @@ export function CollegeNavbar({ active = 'home' }: CollegeNavbarProps) {
         paddingBottom: Spacing.two,
         ...libraryElevation(c.shadow, 'header'),
         ...Platform.select({
-          web: { position: 'sticky' as const, top: 0, zIndex: 100 },
+          web: { position: 'sticky' as any, top: 0, zIndex: 100 },
         }),
       },
       bar: {

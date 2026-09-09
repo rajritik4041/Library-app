@@ -26,6 +26,12 @@ type AuthContextValue = {
   loginTeacher: (teacherId: string, password: string) => Promise<void>;
   loginDean: (deanId: string, password: string) => Promise<void>;
   loginStudent: (userId: string, password: string) => Promise<void>;
+  signupStudent: (body: Parameters<typeof api.signupStudent>[0]) => Promise<{
+    success: boolean;
+    message: string;
+    token: string;
+    student: StudentSession;
+  }>;
   updateStudentSession: (student: StudentSession) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -117,6 +123,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.multiRemove([TEACHER_KEY, DEAN_KEY]);
   }, []);
 
+  const signupStudent = useCallback(
+    async (body: Parameters<typeof api.signupStudent>[0]) => {
+      const result = await api.signupStudent(body);
+      setToken(result.token);
+      setRole('student');
+      setStudent(result.student);
+      setTeacher(null);
+      setDean(null);
+      await AsyncStorage.setItem(TOKEN_KEY, result.token);
+      await AsyncStorage.setItem(ROLE_KEY, 'student');
+      await AsyncStorage.setItem(STUDENT_KEY, JSON.stringify(result.student));
+      await AsyncStorage.multiRemove([TEACHER_KEY, DEAN_KEY]);
+      return result;
+    },
+    [],
+  );
+
   const updateStudentSession = useCallback(async (next: StudentSession) => {
     setStudent(next);
     await AsyncStorage.setItem(STUDENT_KEY, JSON.stringify(next));
@@ -143,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginTeacher,
       loginDean,
       loginStudent,
+      signupStudent,
       updateStudentSession,
       logout,
     }),
@@ -156,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginTeacher,
       loginDean,
       loginStudent,
+      signupStudent,
       updateStudentSession,
       logout,
     ],

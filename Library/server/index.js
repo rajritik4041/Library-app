@@ -16,13 +16,43 @@ import {
   assertStudentCanIssueInMongo,
   httpStatusFromIssueError,
 } from './issue-limits.js';
-import { connectMongo, ensureMongoConnected, withMongoRetry } from './mongo-connection.js';
+import {
+  connectMongo,
+  ensureMongoConnected,
+  withMongoRetry,
+  connectAuthMongo,
+  getAuthConnection,
+} from './mongo-connection.js';
+import nodemailer from 'nodemailer';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+
+let mailTransporter = null;
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  mailTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+}
+
+function getMcaetCollections() {
+  const authConn = getAuthConnection();
+  if (!authConn || authConn.readyState !== 1) return null;
+  return {
+    studentCollection: authConn.useDb('student_portal').collection('signup'),
+    professorCollection: authConn.useDb('professor_portal').collection('signup'),
+    adminCollection: authConn.useDb('admin_portal').collection('admin'),
+    otpCollection: authConn.useDb('Otp_Record').collection('otps'),
+    otpLimitsCollection: authConn.useDb('Otp_Record').collection('otp_limits'),
+  };
+}
 
 /** true = Excel catalog.json + JSON issues (Mongo optional) */
 let USE_FILE_MODE = false;
@@ -509,22 +539,69 @@ async function seedDean() {
 // ——— Auth ———
 app.post('/api/auth/teacher/login', async (req, res) => {
   try {
-    const { teacherId, password } = req.body;
-    if (!teacherId || !password) {
-      return res.status(400).json({ error: 'Teacher ID and password required' });
+    const rawTeacher = String(
+      req.body.teacherId || req.body.email || req.body.username || req.body.id || ''
+    ).trim();
+    const { password } = req.body;
+    if (!rawTeacher || !password) {
+      return res.status(400).json({ error: 'Teacher ID / Email / Username and password required' });
     }
+
     let teacherRow = null;
-    if (USE_FILE_MODE) {
-      teacherRow = await fileStore.verifyFileTeacher(teacherId, password);
-    } else {
-      const teacher = await Teacher.findOne({ teacherId: String(teacherId).toUpperCase() });
-      if (teacher && (await bcrypt.compare(password, teacher.passwordHash))) {
-        teacherRow = teacherPublic(teacher);
+
+    // 1. Authenticate with MCAET professor_portal.signup
+    const mcaet = getMcaetCollections();
+    if (mcaet) {
+      try {
+        const escaped = rawTeacher.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const mcaetProf = await mcaet.professorCollection.findOne({
+          $or: [
+            { username: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+            { email: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+            { id: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          ],
+        });
+
+        if (mcaetProf && mcaetProf.password) {
+          const matched = await bcrypt.compare(password, mcaetProf.password);
+          if (matched) {
+            const tid = String(mcaetProf.id || mcaetProf.username || rawTeacher).toUpperCase().trim();
+            teacherRow = {
+              teacherId: tid,
+              name: mcaetProf.name || 'Professor',
+              mobile: mcaetProf.number || '',
+              department: mcaetProf.department || '',
+              inCharge: mcaetProf.designation || 'Library In-Charge',
+              email: mcaetProf.email || '',
+            };
+
+            await mcaet.professorCollection.updateOne(
+              { _id: mcaetProf._id },
+              { $set: { active: true, last_seen: new Date() } }
+            ).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('MCAET professor login query warning:', err.message);
       }
     }
+
+    // 2. Fallback to local MongoDB / File mode
     if (!teacherRow) {
-      return res.status(401).json({ error: 'Invalid teacher ID or password' });
+      if (USE_FILE_MODE) {
+        teacherRow = await fileStore.verifyFileTeacher(rawTeacher, password);
+      } else {
+        const teacher = await Teacher.findOne({ teacherId: String(rawTeacher).toUpperCase() });
+        if (teacher && (await bcrypt.compare(password, teacher.passwordHash))) {
+          teacherRow = teacherPublic(teacher);
+        }
+      }
     }
+
+    if (!teacherRow) {
+      return res.status(401).json({ error: 'Invalid teacher ID / email or password' });
+    }
+
     const token = jwt.sign(
       {
         role: 'teacher',
@@ -546,23 +623,91 @@ app.post('/api/auth/teacher/login', async (req, res) => {
 
 app.post('/api/auth/student/login', async (req, res) => {
   try {
-    const loginId = parseStudentUserId(req.body);
+    const rawLogin = String(
+      req.body.studentUserId || req.body.userId || req.body.email || req.body.username || req.body.studentId || req.body.id || ''
+    ).trim();
     const { password } = req.body;
-    if (!loginId || !password) {
-      return res.status(400).json({ error: 'Student User ID and password required' });
+    if (!rawLogin || !password) {
+      return res.status(400).json({ error: 'Student ID / Username / Email and password required' });
     }
+
     let studentRow = null;
-    if (USE_FILE_MODE) {
-      studentRow = await fileStore.verifyFileStudent(loginId, password);
-    } else {
-      const student = await findStudentByLogin(loginId);
-      if (student && (await bcrypt.compare(password, student.passwordHash))) {
-        studentRow = studentPublic(student);
+
+    // 1. Authenticate with MCAET student_portal.signup
+    const mcaet = getMcaetCollections();
+    if (mcaet) {
+      try {
+        const escaped = rawLogin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const mcaetStudent = await mcaet.studentCollection.findOne({
+          $or: [
+            { username: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+            { email: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+            { id: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          ],
+        });
+
+        if (mcaetStudent && mcaetStudent.password) {
+          const matched = await bcrypt.compare(password, mcaetStudent.password);
+          if (matched) {
+            const sid = String(mcaetStudent.id || mcaetStudent.username || rawLogin).toUpperCase().trim();
+            const sUser = String(mcaetStudent.username || mcaetStudent.id || rawLogin).trim();
+            studentRow = {
+              studentId: sid,
+              userId: sUser,
+              studentUserId: sUser,
+              name: mcaetStudent.name || 'Student',
+              mobile: mcaetStudent.number || '',
+              course: mcaetStudent.branch || 'B. Tech',
+              year: String(mcaetStudent.year || '1'),
+              department: mcaetStudent.department || '',
+              email: mcaetStudent.email || '',
+            };
+
+            await mcaet.studentCollection.updateOne(
+              { _id: mcaetStudent._id },
+              { $set: { active: true, last_seen: new Date() } }
+            ).catch(() => {});
+
+            // Sync with local Book DB Student collection for seamless book issues
+            if (!USE_FILE_MODE && mongoose.connection.readyState === 1) {
+              await Student.findOneAndUpdate(
+                { studentId: sid },
+                {
+                  studentId: sid,
+                  studentUserId: sUser,
+                  passwordHash: mcaetStudent.password,
+                  name: studentRow.name,
+                  mobile: studentRow.mobile || '0000000000',
+                  course: studentRow.course,
+                  year: studentRow.year,
+                  department: studentRow.department,
+                },
+                { upsert: true, new: true }
+              ).catch((e) => console.warn('Sync student to local DB warning:', e.message));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('MCAET student login query warning:', err.message);
       }
     }
+
+    // 2. Fallback to local MongoDB / File mode if not found in MCAET
     if (!studentRow) {
-      return res.status(401).json({ error: 'Invalid User ID or password' });
+      if (USE_FILE_MODE) {
+        studentRow = await fileStore.verifyFileStudent(rawLogin, password);
+      } else {
+        const student = await findStudentByLogin(rawLogin);
+        if (student && (await bcrypt.compare(password, student.passwordHash))) {
+          studentRow = studentPublic(student);
+        }
+      }
     }
+
+    if (!studentRow) {
+      return res.status(401).json({ error: 'Invalid User ID, Email, or Password' });
+    }
+
     const token = jwt.sign(
       { role: 'student', ...studentRow },
       JWT_SECRET,
@@ -577,22 +722,58 @@ app.post('/api/auth/student/login', async (req, res) => {
 
 app.post('/api/auth/dean/login', async (req, res) => {
   try {
-    const { deanId, password } = req.body;
-    if (!deanId || !password) {
-      return res.status(400).json({ error: 'Dean ID and password required' });
+    const rawDean = String(
+      req.body.deanId || req.body.email || req.body.username || ''
+    ).trim();
+    const { password } = req.body;
+    if (!rawDean || !password) {
+      return res.status(400).json({ error: 'Dean ID / Email and password required' });
     }
+
     let deanRow = null;
-    if (USE_FILE_MODE) {
-      deanRow = await fileStore.verifyFileDean(deanId, password);
-    } else {
-      const dean = await Dean.findOne({ deanId: String(deanId).toUpperCase() });
-      if (dean && (await bcrypt.compare(password, dean.passwordHash))) {
-        deanRow = { deanId: dean.deanId, name: dean.name };
+
+    // 1. Authenticate with MCAET admin_portal.admin
+    const mcaet = getMcaetCollections();
+    if (mcaet) {
+      try {
+        const escaped = rawDean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const mcaetAdmin = await mcaet.adminCollection.findOne({
+          $or: [
+            { email: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+            { username: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+          ],
+        });
+
+        if (mcaetAdmin && mcaetAdmin.password) {
+          const matched = await bcrypt.compare(password, mcaetAdmin.password);
+          if (matched) {
+            deanRow = {
+              deanId: mcaetAdmin.email || rawDean,
+              name: mcaetAdmin.name || 'Dean Sir',
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('MCAET admin login query warning:', err.message);
       }
     }
+
+    // 2. Fallback to local MongoDB / File mode
     if (!deanRow) {
-      return res.status(401).json({ error: 'Invalid dean ID or password' });
+      if (USE_FILE_MODE) {
+        deanRow = await fileStore.verifyFileDean(rawDean, password);
+      } else {
+        const dean = await Dean.findOne({ deanId: String(rawDean).toUpperCase() });
+        if (dean && (await bcrypt.compare(password, dean.passwordHash))) {
+          deanRow = { deanId: dean.deanId, name: dean.name };
+        }
+      }
     }
+
+    if (!deanRow) {
+      return res.status(401).json({ error: 'Invalid dean ID / email or password' });
+    }
+
     const token = jwt.sign(
       { role: 'dean', deanId: deanRow.deanId, name: deanRow.name },
       JWT_SECRET,
@@ -602,6 +783,203 @@ app.post('/api/auth/dean/login', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Student Self-Signup into MCAET Portal Database
+app.post('/api/auth/student/signup', async (req, res) => {
+  try {
+    const {
+      name,
+      username,
+      id,
+      email,
+      password,
+      mobile,
+      number,
+      course,
+      branch,
+      year,
+      department,
+      dob,
+      gender,
+    } = req.body;
+
+    if (!name?.trim() || !username?.trim() || !id?.trim() || !email?.trim() || !password) {
+      return res.status(400).json({
+        error: 'Name, Username, Student ID / Roll No, Email, and Password are required',
+      });
+    }
+
+    const normEmail = email.trim().toLowerCase();
+    const normUsername = username.trim().toLowerCase();
+    const normId = String(id).toUpperCase().trim();
+    const normMobile = String(mobile || number || '').trim();
+    const normBranch = String(branch || course || 'B. Tech').trim();
+    const normYear = String(year || '1').trim();
+    const normDept = String(department || '').trim();
+
+    const mcaet = getMcaetCollections();
+    if (mcaet) {
+      const existing = await mcaet.studentCollection.findOne({
+        $or: [
+          { email: normEmail },
+          { username: normUsername },
+          { id: normId },
+        ],
+      });
+
+      if (existing) {
+        if (existing.email?.toLowerCase() === normEmail) {
+          return res.status(409).json({ error: 'Email already registered in MCAET portal' });
+        }
+        if (existing.username?.toLowerCase() === normUsername) {
+          return res.status(409).json({ error: 'Username already taken' });
+        }
+        return res.status(409).json({ error: 'Student ID / Roll No already registered' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      const studentDoc = {
+        name: name.trim(),
+        username: normUsername,
+        id: normId,
+        email: normEmail,
+        password: passwordHash,
+        number: normMobile,
+        branch: normBranch,
+        year: normYear,
+        department: normDept,
+        dob: dob ? new Date(dob) : null,
+        gender: gender || 'Male',
+        conditions: true,
+        verified: true,
+        active: true,
+        created_at: new Date(),
+        last_seen: new Date(),
+      };
+
+      await mcaet.studentCollection.insertOne(studentDoc);
+
+      // Sync into local Book DB
+      if (!USE_FILE_MODE && mongoose.connection.readyState === 1) {
+        await Student.findOneAndUpdate(
+          { studentId: normId },
+          {
+            studentId: normId,
+            studentUserId: normUsername,
+            passwordHash,
+            name: studentDoc.name,
+            mobile: normMobile || '0000000000',
+            course: normBranch,
+            year: normYear,
+            department: normDept,
+          },
+          { upsert: true, new: true },
+        ).catch((e) => console.warn('Local student sync warning:', e.message));
+      }
+
+      const studentRow = {
+        studentId: normId,
+        userId: normUsername,
+        studentUserId: normUsername,
+        name: studentDoc.name,
+        mobile: normMobile,
+        course: normBranch,
+        year: normYear,
+        department: normDept,
+        email: normEmail,
+      };
+
+      const token = jwt.sign(
+        { role: 'student', ...studentRow },
+        JWT_SECRET,
+        { expiresIn: '7d' },
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'Student registered successfully in MCAET portal',
+        token,
+        student: studentRow,
+      });
+    }
+
+    return res.status(500).json({ error: 'MCAET Auth Database is not connected' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Registration failed: ' + err.message });
+  }
+});
+
+// Email OTP Endpoints for MCAET verification
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const mcaet = getMcaetCollections();
+    if (!mcaet) {
+      return res.status(500).json({ error: 'MCAET Database not connected' });
+    }
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    await mcaet.otpCollection.updateOne(
+      { email },
+      { $set: { email, Otp: otp, createdAt: new Date() } },
+      { upsert: true },
+    );
+
+    if (mailTransporter) {
+      await mailTransporter.sendMail({
+        from: `"MCAET Library Portal" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'MCAET Library Portal - OTP Verification Code',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+            <h2 style="color: #1e3a8a; margin-top: 0;">MCAET Examination &amp; Library Portal</h2>
+            <p style="color: #475569; font-size: 15px;">Your verification OTP code is:</p>
+            <div style="background: #f1f5f9; padding: 18px; text-align: center; border-radius: 8px; margin: 20px 0;">
+              <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #1e3a8a;">${otp}</span>
+            </div>
+            <p style="color: #64748b; font-size: 13px;">This OTP is valid for 5 minutes. Please do not share it with anyone.</p>
+          </div>
+        `,
+      });
+    }
+
+    res.json({ success: true, message: 'OTP sent successfully to ' + email });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to send OTP: ' + err.message });
+  }
+});
+
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const otp = String(req.body.otp || req.body.Otp || '').trim();
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Email and OTP required' });
+    }
+
+    const mcaet = getMcaetCollections();
+    if (!mcaet) {
+      return res.status(500).json({ error: 'MCAET Database not connected' });
+    }
+
+    const record = await mcaet.otpCollection.findOne({ email });
+    if (!record || String(record.Otp) !== String(otp)) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
+    }
+
+    await mcaet.otpCollection.deleteOne({ _id: record._id });
+    res.json({ success: true, message: 'OTP verified successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'OTP verification failed' });
   }
 });
 
@@ -854,6 +1232,40 @@ app.post('/api/students', authTeacher, async (req, res) => {
       year: year.trim(),
       department: department.trim(),
     });
+
+    // Also sync to MCAET portal student_portal.signup
+    const mcaet = getMcaetCollections();
+    if (mcaet) {
+      try {
+        await mcaet.studentCollection.updateOne(
+          { id: idNo },
+          {
+            $set: {
+              name: name.trim(),
+              username: loginId.toLowerCase(),
+              id: idNo,
+              password: passwordHash,
+              number: mobileNorm,
+              branch: course.trim(),
+              year: year.trim(),
+              department: department.trim(),
+              conditions: true,
+              verified: true,
+              active: true,
+              last_seen: new Date(),
+            },
+            $setOnInsert: {
+              email: req.body.email?.trim().toLowerCase() || `${loginId.toLowerCase()}@mcaet.edu.in`,
+              created_at: new Date(),
+            },
+          },
+          { upsert: true }
+        );
+      } catch (mcaetErr) {
+        console.warn('Sync created student to MCAET portal warning:', mcaetErr.message);
+      }
+    }
+
     res.status(201).json({ student: studentPublic(student) });
   } catch (err) {
     console.error(err);
@@ -1587,7 +1999,14 @@ async function start() {
       await connectMongo(uri);
       USE_FILE_MODE = false;
       FILE_MODE_REASON = '';
-      console.log('MongoDB connected');
+      console.log('Book MongoDB connected');
+      if (process.env.MCAET_AUTH_MONGODB_URI) {
+        try {
+          await connectAuthMongo(process.env.MCAET_AUTH_MONGODB_URI);
+        } catch (authErr) {
+          console.warn('MCAET Auth DB connection warning:', authErr.message);
+        }
+      }
       await seedDean();
       await seedTeacher();
       await migrateStudentUserIds();

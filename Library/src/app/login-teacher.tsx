@@ -132,21 +132,21 @@ export default function TeacherLoginScreen() {
   return (
     <ScreenShell centered>
       <PageHeader
-        badge="Professor"
+        badge="MCAET Faculty"
         title="Professor Login"
-        subtitle="Sign in to manage books, register students, and handle book issue and return operations."
+        subtitle="Sign in with your MCAET Professor portal credentials (Email, Username, or ID)."
       />
 
       <LoginForm
         fields={[
           {
             key: 'teacherId',
-            kind: 'teacherId',
-            label: 'Professor ID',
+            kind: 'username',
+            label: 'Professor ID / Email / Username',
             value: teacherId,
             onChangeText: setTeacherId,
-            placeholder: 'e.g. P001',
-            autoCapitalize: 'characters',
+            placeholder: 'e.g. mcaetitteam or prof@mcaet.edu.in',
+            autoCapitalize: 'none',
           },
           {
             key: 'password',
@@ -154,13 +154,14 @@ export default function TeacherLoginScreen() {
             label: 'Password',
             value: password,
             onChangeText: setPassword,
-            placeholder: 'Password',
+            placeholder: 'Portal Password',
             secure: true,
           },
         ]}
         onSubmit={onLogin}
         loading={loading}
         submitError={submitError}
+        hint="Sign in using your faculty credentials from the MCAET portal."
       />
 
       <Pressable onPress={() => router.replace('/welcome')}>
